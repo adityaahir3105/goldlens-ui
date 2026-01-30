@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { Activity, BarChart3, TrendingUp } from 'lucide-react';
 import {
   getLatestGoldRisk,
