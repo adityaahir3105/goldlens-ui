@@ -1,36 +1,150 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# GoldLens UI
+
+A production-quality macro risk analytics dashboard for gold market exposure analysis.
+
+## Tech Stack
+
+- **Next.js 16** (App Router)
+- **TypeScript**
+- **Tailwind CSS** (Dark theme with gold accent)
+- **Recharts** for data visualization
+- **Framer Motion** for animations
+- **Lucide Icons**
+
+## Features
+
+- **Gold Risk Assessment** - Real-time risk level display (LOW/MEDIUM/HIGH) with color-coded indicators
+- **Macro Indicators** - Key economic indicators with signal badges and confidence levels
+- **AI Explainability** - Expandable sections explaining risk assessments and indicator meanings
+- **Server-Side Rendering** - SSR for fast initial load without flicker
+- **Graceful Error Handling** - Friendly messages when data is unavailable
+
+## Project Structure
+
+```
+src/
+├── app/
+│   ├── layout.tsx          # Root layout with header/footer
+│   ├── page.tsx            # Main dashboard (Server Component)
+│   └── globals.css         # Global styles and theme
+├── components/
+│   ├── cards/
+│   │   ├── GoldRiskCard.tsx
+│   │   ├── IndicatorCard.tsx
+│   │   └── AIExplainSection.tsx
+│   ├── charts/
+│   │   └── IndicatorMiniChart.tsx
+│   ├── ui/
+│   │   ├── Badge.tsx
+│   │   ├── Card.tsx
+│   │   └── Spinner.tsx
+│   └── DashboardClient.tsx
+└── lib/
+    ├── api.ts              # API fetch wrappers
+    ├── types.ts            # TypeScript interfaces
+    └── utils.ts            # Helper functions
+```
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18+
+- Backend API running at `http://localhost:8081`
+
+### Installation
+
+```bash
+npm install
+```
+
+### Environment Setup
+
+Create a `.env.local` file:
+
+```
+NEXT_PUBLIC_API_BASE=http://localhost:8081
+```
+
+### Development
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to view the dashboard.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Production Build
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm start
+```
 
-## Learn More
+## API Endpoints
 
-To learn more about Next.js, take a look at the following resources:
+The dashboard consumes the following REST endpoints:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/gold-risk/latest` | GET | Latest gold risk snapshot |
+| `/api/indicators` | GET | List of all indicators |
+| `/api/indicators/{code}/latest` | GET | Latest value for an indicator |
+| `/api/signals/{code}/latest` | GET | Latest signal for an indicator |
+| `/api/ai/explain/gold-risk` | POST | AI explanation for gold risk |
+| `/api/ai/explain/indicator` | POST | AI explanation for an indicator |
+| `/api/ai/explain/signal` | POST | AI explanation for a signal |
+| `/api/gold-price/latest` | GET | Latest gold spot price |
+| `/api/gold/price/history` | GET | Gold price history (30D) |
+| `/api/indicators/{code}/history` | GET | Indicator history (30D) |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Deployment
 
-## Deploy on Vercel
+### Vercel Deployment
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. **Push to GitHub**
+   ```bash
+   git add .
+   git commit -m "Prepare for production deployment"
+   git push origin main
+   ```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+2. **Import to Vercel**
+   - Go to [vercel.com](https://vercel.com) and sign in
+   - Click "Add New Project"
+   - Import your GitHub repository
+   - Vercel will auto-detect Next.js
+
+3. **Configure Environment Variables**
+   In Vercel project settings → Environment Variables, add:
+
+   | Variable | Value | Required |
+   |----------|-------|----------|
+   | `NEXT_PUBLIC_API_BASE` | Your backend API URL (e.g., `https://api.goldlens.example.com`) | Yes |
+
+   > ⚠️ **Important**: Do not include a trailing slash in the API URL.
+
+4. **Deploy**
+   - Click "Deploy"
+   - Vercel will build and deploy automatically
+
+### Environment Variables
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `NEXT_PUBLIC_API_BASE` | Backend API base URL | `https://api.goldlens.example.com` |
+
+### Backend Requirements
+
+The frontend expects the backend API to be accessible at the configured `NEXT_PUBLIC_API_BASE` URL. Ensure:
+
+- Backend is deployed and publicly accessible (or accessible from Vercel's network)
+- CORS is configured to allow requests from your Vercel domain
+- All API endpoints listed below are available
+
+## Design Principles
+
+- **Risk Awareness** - This is an analytical dashboard, not a trading UI
+- **No Trading Advice** - No buy/sell recommendations or price predictions
+- **Professional Tone** - Finance-grade, calm copy throughout
+- **Graceful Degradation** - Clear messaging when data is unavailable

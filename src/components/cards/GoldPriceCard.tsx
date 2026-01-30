@@ -1,0 +1,193 @@
+'use client';
+
+import { motion } from 'framer-motion';
+import { Coins, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { LineChart, Line, ResponsiveContainer, YAxis } from 'recharts';
+import { GoldPrice, GoldPriceHistoryPoint } from '@/lib/types';
+import { formatShortDate, safePercentChange, formatPercentChange, formatAbsoluteChange, cn } from '@/lib/utils';
+import { Card, CardContent } from '@/components/ui/Card';
+
+interface GoldPriceCardProps {
+  data: GoldPrice | null;
+  history?: GoldPriceHistoryPoint[];
+}
+
+function getTrendInfo(changePercent: number | null): { label: string; color: string; icon: typeof TrendingUp } {
+  if (changePercent === null) return { label: 'Flat', color: 'text-amber-400', icon: Minus };
+  if (changePercent > 0.5) return { label: 'Rising', color: 'text-emerald-400', icon: TrendingUp };
+  if (changePercent < -0.5) return { label: 'Falling', color: 'text-rose-400', icon: TrendingDown };
+  return { label: 'Flat', color: 'text-amber-400', icon: Minus };
+}
+
+export function GoldPriceCard({ data, history = [] }: GoldPriceCardProps) {
+  if (!data) {
+    return (
+      <Card className="border-zinc-700/50">
+        <CardContent className="py-4">
+          <div className="flex items-center gap-3 text-zinc-500">
+            <Coins className="h-5 w-5" />
+            <p className="text-sm">Gold price unavailable</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const hasChange = data.change !== undefined && data.change !== null && isFinite(data.change);
+  const isPositive = hasChange && data.change! > 0;
+  const isNegative = hasChange && data.change! < 0;
+
+  const deltaColorClass = isPositive
+    ? 'text-emerald-400'
+    : isNegative
+    ? 'text-rose-400'
+    : 'text-zinc-400';
+
+  const deltaIcon = isPositive ? '▲' : isNegative ? '▼' : '●';
+
+  const formattedPrice = data.price.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+  const formattedDailyChange = hasChange ? formatAbsoluteChange(data.change!) : null;
+  const formattedDailyPercent = data.changePercent !== undefined && isFinite(data.changePercent)
+    ? formatPercentChange(data.changePercent)
+    : null;
+
+  const chartData = history.filter(p => p.value !== null && p.value !== undefined && isFinite(p.value)).map((point) => ({
+    date: point.date,
+    value: point.value,
+  }));
+
+  const hasHistory = chartData.length >= 2;
+  const latestHistoryDate = hasHistory ? chartData[chartData.length - 1].date : null;
+
+  const thirtyDayChangePercent = hasHistory
+    ? safePercentChange(chartData[chartData.length - 1].value, chartData[0].value)
+    : null;
+
+  const thirtyDayChange = hasHistory
+    ? chartData[chartData.length - 1].value - chartData[0].value
+    : null;
+
+  const trendInfo = getTrendInfo(thirtyDayChangePercent);
+  const TrendIcon = trendInfo.icon;
+
+  const delta30DayIcon = thirtyDayChange !== null
+    ? thirtyDayChange > 0 ? '▲' : thirtyDayChange < 0 ? '▼' : '●'
+    : null;
+
+  const delta30DayColorClass = thirtyDayChange !== null
+    ? thirtyDayChange > 0 ? 'text-emerald-400' : thirtyDayChange < 0 ? 'text-rose-400' : 'text-amber-400'
+    : 'text-zinc-500';
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: 'easeOut' }}
+    >
+      <Card className="border-gold/20 bg-gradient-to-r from-zinc-900 to-zinc-900/80">
+        <CardContent>
+          <div className="flex flex-col lg:flex-row lg:items-center gap-6">
+            <div className="flex-1">
+              <div className="flex items-center gap-4 mb-4">
+                <motion.div
+                  initial={{ scale: 0.9 }}
+                  animate={{ scale: 1 }}
+                  transition={{ duration: 0.3, delay: 0.1 }}
+                  className="flex h-12 w-12 items-center justify-center rounded-lg bg-gold/10"
+                >
+                  <Coins className="h-6 w-6 text-gold" />
+                </motion.div>
+                <div>
+                  <div className="text-xs font-medium uppercase tracking-wider text-zinc-500 mb-1">
+                    Gold Spot Price
+                  </div>
+                  <div className="flex items-baseline gap-3">
+                    <motion.span
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.3, delay: 0.15 }}
+                      className="text-3xl font-bold text-gold"
+                    >
+                      ${formattedPrice}
+                    </motion.span>
+                    <span className="text-sm text-zinc-500">
+                      {data.currency} / {data.unit}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4 flex-wrap">
+                {(formattedDailyChange || formattedDailyPercent) && (
+                  <div>
+                    <div className="text-xs text-zinc-500 mb-0.5">Daily</div>
+                    <div className={cn('text-sm font-semibold', deltaColorClass)}>
+                      {deltaIcon} {formattedDailyChange || '—'}
+                      {formattedDailyPercent && (
+                        <span className="ml-1 text-xs">({formattedDailyPercent})</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {hasHistory && (
+                  <div>
+                    <div className="text-xs text-zinc-500 mb-0.5">30D Trend</div>
+                    <div className={cn('text-sm font-semibold flex items-center gap-1', trendInfo.color)}>
+                      <TrendIcon className="h-3.5 w-3.5" />
+                      {trendInfo.label}
+                    </div>
+                  </div>
+                )}
+
+                <div className="text-xs text-zinc-500">
+                  As of {formatShortDate(latestHistoryDate || data.updatedAt)}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex-1 min-w-0">
+              {hasHistory ? (
+                <div>
+                  <div className="h-20">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={chartData}>
+                        <YAxis domain={['dataMin', 'dataMax']} hide />
+                        <Line
+                          type="monotone"
+                          dataKey="value"
+                          stroke="#FFD700"
+                          strokeWidth={2}
+                          dot={false}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="flex items-center justify-between mt-1">
+                    <p className="text-xs text-zinc-500">
+                      30-day trend
+                    </p>
+                    <p className={cn('text-xs font-medium', delta30DayColorClass)}>
+                      {delta30DayIcon} {formatPercentChange(thirtyDayChangePercent)}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-20 rounded-lg border border-dashed border-zinc-800">
+                  <Minus className="h-4 w-4 text-zinc-600 mb-1" />
+                  <p className="text-xs text-zinc-500">
+                    Insufficient data
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}
