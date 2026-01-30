@@ -1,4 +1,6 @@
 export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+export const revalidate = 0;
 
 import { Activity, BarChart3, TrendingUp } from 'lucide-react';
 import {
