@@ -119,3 +119,21 @@ export async function explainSignal(code: string, context?: string): Promise<str
   });
   return result?.explanation || null;
 }
+
+export interface GoldNewsItem {
+  title: string;
+  source: string;
+  url: string;
+  publishedAt: string;
+  sentiment: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+}
+
+export interface GoldNewsResponse {
+  items: GoldNewsItem[];
+  provider: string;
+  fetchedAt: string;
+}
+
+export async function getGoldNews(): Promise<GoldNewsResponse | null> {
+  return fetchApi<GoldNewsResponse>('/api/news/gold');
+}

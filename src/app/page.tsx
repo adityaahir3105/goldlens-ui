@@ -20,6 +20,7 @@ import { GoldDriversCard } from '@/components/cards/GoldDriversCard';
 import { SnapshotRow } from '@/components/cards/SnapshotRow';
 import { IndicatorCard } from '@/components/cards/IndicatorCard';
 import { DashboardClient } from '@/components/DashboardClient';
+import { GoldNewsSection } from '@/components/cards/GoldNewsSection';
 
 async function fetchDashboardData() {
   const [goldPrice, goldPriceHistory, goldRisk, indicators] = await Promise.all([
@@ -138,6 +139,9 @@ export default async function DashboardPage() {
           </div>
         )}
       </section>
+
+      {/* Gold Market News Section */}
+      <GoldNewsSection />
     </div>
   );
 }
