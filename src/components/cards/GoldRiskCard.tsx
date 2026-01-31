@@ -13,7 +13,7 @@ interface GoldRiskCardProps {
 export function GoldRiskCard({ data }: GoldRiskCardProps) {
   if (!data) {
     return (
-      <Card className="border-zinc-700/50">
+      <Card className="w-full border-zinc-700/50">
         <CardContent>
           <div className="flex items-center gap-3 text-zinc-500">
             <Shield className="h-5 w-5" />
@@ -46,7 +46,7 @@ export function GoldRiskCard({ data }: GoldRiskCardProps) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: 'easeOut' }}
     >
-      <Card className={cn('border', colors.border, 'shadow-lg', colors.glow)}>
+      <Card className={cn('w-full border', colors.border, 'shadow-lg', colors.glow)}>
         <CardContent>
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
@@ -84,7 +84,7 @@ export function GoldRiskCard({ data }: GoldRiskCardProps) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.3, delay: 0.25 }}
-            className="mt-4 rounded-lg bg-zinc-800/50 p-3"
+            className="mt-5 rounded-lg bg-zinc-800/50 p-4"
           >
             <div className="mb-1 text-xs font-medium uppercase tracking-wider text-zinc-500">
               Analysis Summary

@@ -60,7 +60,7 @@ export default function RootLayout({
               </div>
             </div>
           </header>
-          <main className="flex-1">{children}</main>
+          <main className="flex justify-center w-full min-h-screen">{children}</main>
           <footer className="border-t border-zinc-800 py-6">
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
               <p className="text-center text-xs text-zinc-600">

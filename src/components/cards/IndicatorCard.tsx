@@ -127,9 +127,9 @@ export function IndicatorCard({ data, index = 0 }: IndicatorCardProps) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: index * 0.05, ease: 'easeOut' }}
     >
-      <Card className={cn('h-full transition-colors hover:border-zinc-700', cardBorderClass)}>
+      <Card className={cn('w-full h-full transition-colors hover:border-zinc-700', cardBorderClass)}>
         <CardContent>
-          <div className="mb-3 flex items-start justify-between gap-2">
+          <div className="mb-4 flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
               <h4 className={cn(
                 'truncate text-sm font-semibold',
@@ -150,7 +150,7 @@ export function IndicatorCard({ data, index = 0 }: IndicatorCardProps) {
           </div>
 
           {latestPoint ? (
-            <div className="mb-3">
+            <div className="mb-4">
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl font-bold text-gold">
                   {formatValue(latestPoint.value, indicator.unit)}
@@ -166,14 +166,14 @@ export function IndicatorCard({ data, index = 0 }: IndicatorCardProps) {
               </p>
             </div>
           ) : (
-            <div className="mb-3">
+            <div className="mb-4">
               <p className="text-sm text-zinc-500">
                 Macro signals are stabilizing — analysis will update as new data arrives
               </p>
             </div>
           )}
 
-          <div className="mb-3">
+          <div className="mb-4">
             <IndicatorMiniChart 
               data={chartData} 
               color={chartColor}
@@ -212,7 +212,7 @@ export function IndicatorCard({ data, index = 0 }: IndicatorCardProps) {
             </div>
           )}
 
-          <p className="mt-3 text-xs leading-relaxed text-zinc-500">
+          <p className="mt-4 text-xs leading-relaxed text-zinc-500">
             {indicator.description}
           </p>
         </CardContent>

@@ -58,15 +58,15 @@ export function GoldDriversCard({ riskLevel, realYieldSignal, dxySignal }: GoldD
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: 0.1, ease: 'easeOut' }}
     >
-      <Card className="border-zinc-800">
+      <Card className="w-full border-zinc-800">
         <CardContent>
-          <div className="flex items-center gap-2 mb-4">
-            <Lightbulb className="h-4 w-4 text-gold" />
-            <h3 className="text-sm font-semibold text-zinc-200">
+          <div className="flex items-center gap-2 mb-5">
+            <Lightbulb className="h-5 w-5 text-gold" />
+            <h3 className="text-base font-semibold text-zinc-200">
               What&apos;s Driving Gold Risk?
             </h3>
           </div>
-          <ul className="space-y-2">
+          <ul className="space-y-3">
             {bullets.map((bullet, index) => (
               <motion.li
                 key={index}

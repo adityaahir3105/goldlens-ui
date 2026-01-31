@@ -68,7 +68,11 @@ export function SnapshotRow({
   const dxyData = getDirectionAndChange(dxyHistory);
   const goldData = getGoldPriceData(goldPriceHistory);
 
-  const goldIcon = goldData.direction === 'up' ? '▲' : goldData.direction === 'down' ? '▼' : '●';
+  const hasGoldHistory = goldPriceHistory.length >= 2;
+  const hasRealYieldHistory = realYieldHistory.length >= 2;
+  const hasDxyHistory = dxyHistory.length >= 2;
+
+  const goldIcon = goldData.direction === 'up' ? '▲' : goldData.direction === 'down' ? '▼' : '—';
   const goldColorClass = goldData.direction === 'up'
     ? 'text-emerald-400'
     : goldData.direction === 'down'
@@ -76,31 +80,49 @@ export function SnapshotRow({
     : 'text-zinc-500';
 
   return (
-    <Card className="border-zinc-800">
-      <CardContent className="py-3">
-        <div className="text-xs font-medium uppercase tracking-wider text-zinc-500 mb-3">
+    <Card className="w-full border-zinc-800">
+      <CardContent className="py-4">
+        <div className="text-xs font-medium uppercase tracking-wider text-zinc-500 mb-4">
           Market Snapshot (30D)
         </div>
         <div className="flex items-center justify-around">
           <div className="flex flex-col items-center">
             <span className="text-xs text-zinc-500 mb-0.5">Gold</span>
-            <span className={cn('text-sm font-semibold', goldColorClass)}>
-              {goldIcon} {formatPercentChange(goldData.changePercent)}
-            </span>
+            {hasGoldHistory ? (
+              <span className={cn('text-sm font-semibold', goldColorClass)}>
+                {goldIcon} {formatPercentChange(goldData.changePercent)}
+              </span>
+            ) : (
+              <span className="text-sm text-zinc-600">—</span>
+            )}
           </div>
           <div className="h-6 w-px bg-zinc-800" />
-          <IndicatorChange 
-            label="Real Yield" 
-            direction={realYieldData.direction} 
-            change={realYieldData.change}
-            unit="%"
-          />
+          {hasRealYieldHistory ? (
+            <IndicatorChange 
+              label="Real Yield" 
+              direction={realYieldData.direction} 
+              change={realYieldData.change}
+              unit="%"
+            />
+          ) : (
+            <div className="flex flex-col items-center">
+              <span className="text-xs text-zinc-500 mb-0.5">Real Yield</span>
+              <span className="text-sm text-zinc-600">—</span>
+            </div>
+          )}
           <div className="h-6 w-px bg-zinc-800" />
-          <IndicatorChange 
-            label="Dollar Index" 
-            direction={dxyData.direction} 
-            change={dxyData.change}
-          />
+          {hasDxyHistory ? (
+            <IndicatorChange 
+              label="Dollar Index" 
+              direction={dxyData.direction} 
+              change={dxyData.change}
+            />
+          ) : (
+            <div className="flex flex-col items-center">
+              <span className="text-xs text-zinc-500 mb-0.5">Dollar Index</span>
+              <span className="text-sm text-zinc-600">—</span>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

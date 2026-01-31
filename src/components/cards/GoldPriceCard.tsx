@@ -22,7 +22,7 @@ function getTrendInfo(changePercent: number | null): { label: string; color: str
 export function GoldPriceCard({ data, history = [] }: GoldPriceCardProps) {
   if (!data) {
     return (
-      <Card className="border-zinc-700/50">
+      <Card className="w-full border-zinc-700/50">
         <CardContent className="py-4">
           <div className="flex items-center gap-3 text-zinc-500">
             <Coins className="h-5 w-5" />
@@ -88,7 +88,7 @@ export function GoldPriceCard({ data, history = [] }: GoldPriceCardProps) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: 'easeOut' }}
     >
-      <Card className="border-gold/20 bg-gradient-to-r from-zinc-900 to-zinc-900/80">
+      <Card className="w-full border-gold/20 bg-gradient-to-r from-zinc-900 to-zinc-900/80">
         <CardContent>
           <div className="flex flex-col lg:flex-row lg:items-center gap-6">
             <div className="flex-1">
@@ -177,10 +177,9 @@ export function GoldPriceCard({ data, history = [] }: GoldPriceCardProps) {
                   </div>
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center h-20 rounded-lg border border-dashed border-zinc-800">
-                  <Minus className="h-4 w-4 text-zinc-600 mb-1" />
-                  <p className="text-xs text-zinc-500">
-                    Insufficient data
+                <div className="flex flex-col items-center justify-center h-20 rounded-lg border border-dashed border-zinc-800 bg-zinc-900/30">
+                  <p className="text-xs text-zinc-500 text-center px-4">
+                    Historical data unavailable from current provider
                   </p>
                 </div>
               )}

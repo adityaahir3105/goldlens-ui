@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 export const revalidate = 0;
 
-import { Activity, BarChart3, TrendingUp } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 import {
   getLatestGoldRisk,
   getLatestGoldPrice,
@@ -45,16 +45,6 @@ async function fetchDashboardData() {
     })
   );
 
-  let mostRecentDate: string | null = null;
-  for (const ind of indicatorsWithData) {
-    if (ind.history.length > 0) {
-      const latestPoint = ind.history[ind.history.length - 1];
-      if (!mostRecentDate || latestPoint.date > mostRecentDate) {
-        mostRecentDate = latestPoint.date;
-      }
-    }
-  }
-
   const realYieldData = indicatorsWithData.find(d => d.indicator.code === 'REAL_YIELD');
   const dxyData = indicatorsWithData.find(d => d.indicator.code === 'DXY');
 
@@ -68,7 +58,6 @@ async function fetchDashboardData() {
     goldPriceHistory,
     goldRisk, 
     indicatorsWithData, 
-    mostRecentDate,
     realYieldSignal,
     dxySignal,
     realYieldHistory,
@@ -82,7 +71,6 @@ export default async function DashboardPage() {
     goldPriceHistory,
     goldRisk, 
     indicatorsWithData, 
-    mostRecentDate,
     realYieldSignal,
     dxySignal,
     realYieldHistory,
@@ -90,87 +78,59 @@ export default async function DashboardPage() {
   } = await fetchDashboardData();
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mb-4 flex items-center justify-end">
-        <div className="flex items-center gap-2 text-xs text-zinc-500">
-          <span>Last updated: {getRelativeTime(mostRecentDate)}</span>
-          <span className="text-zinc-600">•</span>
-          <span className="flex items-center gap-1">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            Live
-          </span>
-        </div>
-      </div>
-
-      <section className="mb-6">
+    <div className="w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
+      {/* Hero Section - Gold Price */}
+      <section className="mb-16">
+        {goldPrice && (
+          <div className="flex items-center justify-end mb-4">
+            <div className="text-xs text-zinc-500">
+              Last updated: {getRelativeTime(goldPrice.updatedAt)}
+            </div>
+          </div>
+        )}
         <GoldPriceCard data={goldPrice} history={goldPriceHistory} />
       </section>
 
-      <section className="mb-6">
-        <SnapshotRow 
-          goldPriceHistory={goldPriceHistory}
-          realYieldSignal={realYieldSignal}
-          dxySignal={dxySignal}
-          realYieldHistory={realYieldHistory}
-          dxyHistory={dxyHistory}
-        />
-      </section>
+      {/* Market Snapshot Section */}
+      {(goldPriceHistory.length >= 2 || realYieldHistory.length >= 2 || dxyHistory.length >= 2) && (
+        <section className="mb-16">
+          <SnapshotRow 
+            goldPriceHistory={goldPriceHistory}
+            realYieldSignal={realYieldSignal}
+            dxySignal={dxySignal}
+            realYieldHistory={realYieldHistory}
+            dxyHistory={dxyHistory}
+          />
+        </section>
+      )}
 
-      <section className="mb-6">
-        <div className="mb-4 flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gold/10">
-            <Activity className="h-4 w-4 text-gold" />
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold text-zinc-100">
-              Risk Overview
-            </h2>
-            <p className="text-xs text-zinc-500">
-              Current macro risk assessment for gold exposure
-            </p>
-          </div>
-        </div>
+      {/* Risk Overview & Drivers Section */}
+      <section className="mb-16">
+        <div className="space-y-4 mb-10">
+          <GoldRiskCard data={goldRisk} />
 
-        <GoldRiskCard data={goldRisk} />
-
-        {goldRisk && (
-          <div className="mt-3">
+          {goldRisk && (
             <DashboardClient goldRisk={goldRisk} />
-          </div>
-        )}
-      </section>
+          )}
 
-      <section className="mb-6">
-        <GoldDriversCard 
-          riskLevel={goldRisk?.riskLevel || null}
-          realYieldSignal={realYieldSignal}
-          dxySignal={dxySignal}
-        />
-      </section>
-
-      <section>
-        <div className="mb-4 flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gold/10">
-            <BarChart3 className="h-4 w-4 text-gold" />
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold text-zinc-100">
-              Macro Indicators
-            </h2>
-            <p className="text-xs text-zinc-500">
-              Key economic indicators and their current signals
-            </p>
-          </div>
+          <GoldDriversCard 
+            riskLevel={goldRisk?.riskLevel || null}
+            realYieldSignal={realYieldSignal}
+            dxySignal={dxySignal}
+          />
         </div>
+      </section>
 
+      {/* Macro Indicators Section */}
+      <section className="mt-12">
         {indicatorsWithData.length > 0 ? (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {indicatorsWithData.map((data, index) => (
               <IndicatorCard key={data.indicator.code} data={data} index={index} />
             ))}
           </div>
         ) : (
-          <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-6 text-center">
+          <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-6 md:p-7 text-center">
             <TrendingUp className="mx-auto mb-2 h-6 w-6 text-zinc-600" />
             <p className="text-sm text-zinc-500">
               Macro signals are stabilizing — analysis will update as new data arrives

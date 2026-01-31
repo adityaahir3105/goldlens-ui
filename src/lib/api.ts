@@ -53,7 +53,22 @@ export async function getLatestGoldRisk(): Promise<GoldRiskSnapshot | null> {
 }
 
 export async function getLatestGoldPrice(): Promise<GoldPrice | null> {
-  return fetchApi<GoldPrice>('/api/gold/price/latest');
+  const result = await fetchApi<{
+    price: number;
+    currency: string;
+    unit: string;
+    asOf: string;
+    source?: string;
+  }>('/api/gold-price/latest');
+  
+  if (!result) return null;
+  
+  return {
+    price: result.price,
+    currency: result.currency,
+    unit: result.unit,
+    updatedAt: result.asOf,
+  };
 }
 
 export async function getGoldPriceHistory(days: number = 30): Promise<GoldPriceHistoryPoint[]> {
