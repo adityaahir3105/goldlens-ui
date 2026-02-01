@@ -79,3 +79,33 @@ export interface GoldPriceHistoryResponse {
   unit: string;
   points: GoldPriceHistoryPoint[];
 }
+
+export type EtfRegion = 'North America' | 'Europe' | 'Asia' | 'Other';
+
+export type DisplayRegion = 
+  | 'China' 
+  | 'India' 
+  | 'Russia' 
+  | 'Rest of Asia' 
+  | 'Europe' 
+  | 'North America' 
+  | 'Other';
+
+export interface EtfFlowPoint {
+  date: string;
+  region: EtfRegion;
+  holdingsTonnes: number | null;
+  netFlowTonnes: number | null;
+}
+
+export interface DisplayFlowPoint {
+  date: string;
+  region: DisplayRegion;
+  holdingsTonnes: number | null;
+  netFlowTonnes: number | null;
+}
+
+export interface EtfFlowResponse {
+  source: string;
+  points: EtfFlowPoint[];
+}

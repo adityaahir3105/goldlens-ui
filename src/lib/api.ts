@@ -137,3 +137,9 @@ export interface GoldNewsResponse {
 export async function getGoldNews(): Promise<GoldNewsResponse | null> {
   return fetchApi<GoldNewsResponse>('/api/news/gold');
 }
+
+import { EtfFlowResponse } from './types';
+
+export async function getEtfFlows(months: number = 24): Promise<EtfFlowResponse | null> {
+  return fetchApi<EtfFlowResponse>(`/api/gold/etf/flows?months=${months}`);
+}
