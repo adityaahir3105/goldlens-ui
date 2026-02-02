@@ -5,6 +5,7 @@ import { geoNaturalEarth1, geoPath } from 'd3-geo';
 import { feature } from 'topojson-client';
 import type { Topology, GeometryCollection } from 'topojson-specification';
 import { DisplayFlowPoint, DisplayRegion } from '@/lib/types';
+import { getFlowColor } from '@/lib/etfFlowColor';
 
 const WORLD_ATLAS_URL = 'https://unpkg.com/world-atlas@2/countries-110m.json';
 
@@ -99,14 +100,7 @@ function getRegionForNumericISO(id: string): DisplayRegion {
   return ISO_NUMERIC_TO_REGION[id] || 'Other';
 }
 
-function getFlowColor(netFlow: number | null): string {
-  if (netFlow === null || netFlow === undefined || isNaN(netFlow)) {
-    return '#374151';
-  }
-  if (netFlow > 0) return '#22c55e';
-  if (netFlow < 0) return '#ef4444';
-  return '#374151';
-}
+const HIGHLIGHTED_COUNTRIES = ['156', '356', '643'];
 
 interface GoldETFWorldMapProps {
   regionData: Map<DisplayRegion, DisplayFlowPoint>;
@@ -210,8 +204,8 @@ export function GoldETFWorldMap({ regionData, onRegionHover }: GoldETFWorldMapPr
             const id = country.id || '';
             const region = getRegionForNumericISO(id);
             const data = regionData.get(region) || null;
-            const fillColor = data ? getFlowColor(data.netFlowTonnes) : '#374151';
-            const isPriority = ['China', 'India', 'Russia'].includes(region);
+            const fillColor = getFlowColor(data?.netFlowTonnes ?? null);
+            const isHighlighted = HIGHLIGHTED_COUNTRIES.includes(id);
             const path = pathGenerator(country.geometry);
 
             if (!path) return null;
@@ -221,9 +215,10 @@ export function GoldETFWorldMap({ regionData, onRegionHover }: GoldETFWorldMapPr
                 key={id}
                 d={path}
                 fill={fillColor}
-                stroke={isPriority ? 'rgba(255, 255, 255, 0.4)' : 'rgba(255, 255, 255, 0.15)'}
-                strokeWidth={isPriority ? 1 : 0.5}
+                stroke={isHighlighted ? '#facc15' : '#111111'}
+                strokeWidth={isHighlighted ? 1.5 : 0.5}
                 className="cursor-pointer transition-opacity duration-150 hover:opacity-80"
+                style={{ fillOpacity: 0.85 }}
                 onMouseMove={(e) => handleMouseMove(e, country, region, data)}
                 onMouseLeave={handleMouseLeave}
               />

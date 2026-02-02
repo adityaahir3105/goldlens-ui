@@ -176,22 +176,30 @@ export function GoldETFWorldSection({ data, source }: GoldETFWorldSectionProps) 
             )}
           </div>
 
-          <div className="mt-3 flex flex-wrap items-center justify-center gap-4 md:gap-6 text-xs text-zinc-500">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-sm bg-emerald-600"></div>
-              <span>Net Inflow</span>
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-3 md:gap-5 text-xs text-zinc-500">
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#16a34a' }}></div>
+              <span>Strong Inflow (&gt;+30t)</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-sm bg-rose-600"></div>
-              <span>Net Outflow</span>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#22c55e' }}></div>
+              <span>Inflow (+5 to +30t)</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-sm bg-zinc-600"></div>
-              <span>Neutral / No Data</span>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#404040' }}></div>
+              <span>Neutral (-5 to +5t)</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-sm border border-white/20 bg-zinc-700"></div>
-              <span>Country Highlight (CN, IN, RU)</span>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#f97316' }}></div>
+              <span>Outflow (-5 to -30t)</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#dc2626' }}></div>
+              <span>Strong Outflow (&lt;-30t)</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-sm border-2" style={{ borderColor: '#facc15', backgroundColor: '#3a3a3a' }}></div>
+              <span>Highlighted (CN, IN, RU)</span>
             </div>
           </div>
 
