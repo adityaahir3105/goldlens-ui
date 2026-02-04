@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Coins, TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { LineChart, Line, ResponsiveContainer, YAxis, Tooltip } from 'recharts';
+import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import { GoldPrice, GoldPriceHistoryPoint } from '@/lib/types';
 import { formatShortDate, safePercentChange, formatPercentChange, formatAbsoluteChange, cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/Card';
@@ -156,6 +156,7 @@ export function GoldPriceCard({ data, history = [] }: GoldPriceCardProps) {
                   <div className="h-20">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={chartData}>
+                        <XAxis dataKey="date" hide />
                         <YAxis domain={['dataMin', 'dataMax']} hide />
                         <Tooltip
                           contentStyle={{
