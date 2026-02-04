@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Coins, TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { LineChart, Line, ResponsiveContainer, YAxis } from 'recharts';
+import { LineChart, Line, ResponsiveContainer, YAxis, Tooltip } from 'recharts';
 import { GoldPrice, GoldPriceHistoryPoint } from '@/lib/types';
 import { formatShortDate, safePercentChange, formatPercentChange, formatAbsoluteChange, cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/Card';
@@ -157,12 +157,38 @@ export function GoldPriceCard({ data, history = [] }: GoldPriceCardProps) {
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={chartData}>
                         <YAxis domain={['dataMin', 'dataMax']} hide />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: '#18181b',
+                            border: '1px solid #3f3f46',
+                            borderRadius: '8px',
+                            fontSize: '12px',
+                          }}
+                          labelStyle={{ color: '#a1a1aa' }}
+                          itemStyle={{ color: '#FFD700' }}
+                          formatter={(value) => {
+                            if (typeof value === 'number') {
+                              return [`$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Gold Price'];
+                            }
+                            return [value, 'Gold Price'];
+                          }}
+                          labelFormatter={(label) => {
+                            const date = new Date(String(label));
+                            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                          }}
+                        />
                         <Line
                           type="monotone"
                           dataKey="value"
                           stroke="#FFD700"
                           strokeWidth={2}
                           dot={false}
+                          activeDot={{
+                            r: 4,
+                            fill: '#FFD700',
+                            stroke: '#18181b',
+                            strokeWidth: 2,
+                          }}
                         />
                       </LineChart>
                     </ResponsiveContainer>
