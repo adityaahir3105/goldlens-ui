@@ -1,11 +1,62 @@
 'use client';
 
+import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Coins, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import { GoldPrice, GoldPriceHistoryPoint } from '@/lib/types';
-import { formatShortDate, safePercentChange, formatPercentChange, formatAbsoluteChange, cn } from '@/lib/utils';
+import { safePercentChange, formatPercentChange, formatAbsoluteChange, cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/Card';
+import { useLiveGoldPrice } from '@/hooks/useLiveGoldPrice';
+
+function formatSecondsAgo(seconds: number): string {
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  return `${hours}h ago`;
+}
+
+interface CustomDotProps {
+  cx?: number;
+  cy?: number;
+  index?: number;
+  dataLength: number;
+}
+
+function AnimatedLastDot({ cx, cy, index, dataLength }: CustomDotProps) {
+  if (cx === undefined || cy === undefined || index === undefined) return null;
+  if (index !== dataLength - 1) return null;
+  
+  return (
+    <g>
+      <motion.circle
+        cx={cx}
+        cy={cy}
+        r={6}
+        fill="#FFD700"
+        opacity={0.3}
+        animate={{
+          r: [6, 10, 6],
+          opacity: [0.3, 0.1, 0.3],
+        }}
+        transition={{
+          duration: 2,
+          repeat: Infinity,
+          ease: 'easeInOut',
+        }}
+      />
+      <circle
+        cx={cx}
+        cy={cy}
+        r={3}
+        fill="#FFD700"
+        stroke="#18181b"
+        strokeWidth={1.5}
+      />
+    </g>
+  );
+}
 
 interface GoldPriceCardProps {
   data: GoldPrice | null;
@@ -20,6 +71,19 @@ function getTrendInfo(changePercent: number | null): { label: string; color: str
 }
 
 export function GoldPriceCard({ data, history = [] }: GoldPriceCardProps) {
+  const { displayPrice, secondsAgo, isAnimating } = useLiveGoldPrice({
+    price: data?.price ?? 0,
+    updatedAt: data?.updatedAt ?? new Date().toISOString(),
+    interpolationDurationMs: 120000,
+  });
+
+  const formattedPrice = useMemo(() => {
+    return displayPrice.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }, [displayPrice]);
+
   if (!data) {
     return (
       <Card className="w-full border-zinc-700/50">
@@ -44,11 +108,6 @@ export function GoldPriceCard({ data, history = [] }: GoldPriceCardProps) {
     : 'text-zinc-400';
 
   const deltaIcon = isPositive ? '▲' : isNegative ? '▼' : '●';
-
-  const formattedPrice = data.price.toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
 
   const formattedDailyChange = hasChange ? formatAbsoluteChange(data.change!) : null;
   const formattedDailyPercent = data.changePercent !== undefined && isFinite(data.changePercent)
@@ -102,15 +161,34 @@ export function GoldPriceCard({ data, history = [] }: GoldPriceCardProps) {
                   <Coins className="h-6 w-6 text-gold" />
                 </motion.div>
                 <div>
-                  <div className="text-xs font-medium uppercase tracking-wider text-zinc-500 mb-1">
-                    Gold Spot Price
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+                      Gold Spot Price
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <motion.div
+                        className="h-1.5 w-1.5 rounded-full bg-emerald-400"
+                        animate={{
+                          scale: [1, 1.3, 1],
+                          opacity: [1, 0.7, 1],
+                        }}
+                        transition={{
+                          duration: 1.5,
+                          repeat: Infinity,
+                          ease: 'easeInOut',
+                        }}
+                      />
+                      <span className="text-[10px] font-medium text-emerald-400 uppercase tracking-wider">
+                        Live
+                      </span>
+                    </div>
                   </div>
                   <div className="flex items-baseline gap-3">
                     <motion.span
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ duration: 0.3, delay: 0.15 }}
-                      className="text-3xl font-bold text-gold"
+                      className={cn(
+                        'text-3xl font-bold text-gold transition-all duration-300',
+                        isAnimating && 'drop-shadow-[0_0_8px_rgba(255,215,0,0.4)]'
+                      )}
                     >
                       ${formattedPrice}
                     </motion.span>
@@ -144,8 +222,13 @@ export function GoldPriceCard({ data, history = [] }: GoldPriceCardProps) {
                   </div>
                 )}
 
-                <div className="text-xs text-zinc-500">
-                  As of {formatShortDate(latestHistoryDate || data.updatedAt)}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-zinc-500">
+                    Last updated:
+                  </span>
+                  <span className="text-xs text-gold font-medium">
+                    {formatSecondsAgo(secondsAgo)}
+                  </span>
                 </div>
               </div>
             </div>
@@ -183,7 +266,12 @@ export function GoldPriceCard({ data, history = [] }: GoldPriceCardProps) {
                           dataKey="value"
                           stroke="#FFD700"
                           strokeWidth={2}
-                          dot={false}
+                          dot={(props) => (
+                            <AnimatedLastDot
+                              {...props}
+                              dataLength={chartData.length}
+                            />
+                          )}
                           activeDot={{
                             r: 4,
                             fill: '#FFD700',

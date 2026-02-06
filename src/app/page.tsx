@@ -13,7 +13,6 @@ import {
   getIndicatorHistory,
 } from '@/lib/api';
 import { IndicatorWithData, SignalColor } from '@/lib/types';
-import { getRelativeTime } from '@/lib/utils';
 import { GoldPriceCard } from '@/components/cards/GoldPriceCard';
 import { GoldRiskCard } from '@/components/cards/GoldRiskCard';
 import { GoldDriversCard } from '@/components/cards/GoldDriversCard';
@@ -83,13 +82,6 @@ export default async function DashboardPage() {
     <div className="w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
       {/* Hero Section - Gold Price */}
       <section className="mb-16">
-        {goldPrice && (
-          <div className="flex items-center justify-end mb-4">
-            <div className="text-xs text-zinc-500">
-              Last updated: {getRelativeTime(goldPrice.updatedAt)}
-            </div>
-          </div>
-        )}
         <GoldPriceCard data={goldPrice} history={goldPriceHistory} />
       </section>
 
