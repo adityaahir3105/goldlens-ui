@@ -1,0 +1,52 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  PROJECT_ID: goldlens-app-2026
+  REGION: asia-south1
+  SERVICE: goldlens-ui
+  IMAGE: asia-south1-docker.pkg.dev/goldlens-app-2026/goldlens-repo/goldlens-ui
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Google Auth
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: '${{ secrets.WIF_PROVIDER }}'
+          service_account: '${{ secrets.SA_EMAIL }}'
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker
+        run: gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
+
+      - name: Build and Push Docker Image
+        run: |
+          gcloud builds submit --config=cloudbuild.yaml --substitutions=SHORT_SHA=${{ github.sha }} --project=${{ env.PROJECT_ID }} --region=${{ env.REGION }}
+
+      - name: Deploy to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.SERVICE }}
+          region: ${{ env.REGION }}
+          image: ${{ env.IMAGE }}:${{ github.sha }}
+          project_id: ${{ env.PROJECT_ID }}
+          flags: |
+            --port=3000
+            --allow-unauthenticated

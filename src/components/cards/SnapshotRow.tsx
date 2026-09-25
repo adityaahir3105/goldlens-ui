@@ -1,45 +1,50 @@
 'use client';
 
-import { IndicatorHistoryPoint, SignalColor, GoldPriceHistoryPoint } from '@/lib/types';
-import { cn, safePercentChange, formatPercentChange, formatAbsoluteChange } from '@/lib/utils';
+import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { AlertTriangle } from 'lucide-react';
+import { MarketSnapshot, MetricSnapshot } from '@/lib/types';
+import { cn, formatPercentChange, formatAbsoluteChange } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/Card';
 
 interface SnapshotRowProps {
-  goldPriceHistory: GoldPriceHistoryPoint[];
-  realYieldSignal: SignalColor | null;
-  dxySignal: SignalColor | null;
-  realYieldHistory: IndicatorHistoryPoint[];
-  dxyHistory: IndicatorHistoryPoint[];
+  snapshot: MarketSnapshot | null;
 }
 
-function getDirectionAndChange(history: IndicatorHistoryPoint[]): { direction: 'up' | 'down' | 'flat'; change: number | null } {
-  if (history.length < 2) return { direction: 'flat', change: null };
-  const latest = history[history.length - 1]?.value;
-  const first = history[0]?.value;
-  if (latest === undefined || first === undefined || !isFinite(latest) || !isFinite(first)) {
-    return { direction: 'flat', change: null };
-  }
-  const diff = latest - first;
-  if (!isFinite(diff)) return { direction: 'flat', change: null };
-  const direction = diff > 0.01 ? 'up' : diff < -0.01 ? 'down' : 'flat';
-  return { direction, change: diff };
+function formatDate(dateStr: string | null): string {
+  if (!dateStr) return 'Unknown';
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function getGoldPriceData(history: GoldPriceHistoryPoint[]): { change: number | null; changePercent: number | null; direction: 'up' | 'down' | 'flat' } {
-  if (history.length < 2) return { change: null, changePercent: null, direction: 'flat' };
-  const latest = history[history.length - 1]?.value;
-  const first = history[0]?.value;
-  if (latest === undefined || first === undefined || !isFinite(latest) || !isFinite(first) || first === 0) {
-    return { change: null, changePercent: null, direction: 'flat' };
-  }
-  const change = latest - first;
-  const changePercent = safePercentChange(latest, first);
-  if (!isFinite(change)) return { change: null, changePercent: null, direction: 'flat' };
-  const direction = change > 0 ? 'up' : change < 0 ? 'down' : 'flat';
-  return { change, changePercent, direction };
+function getDirection(changePercent: number | null): 'up' | 'down' | 'flat' {
+  if (changePercent === null) return 'flat';
+  if (changePercent > 0.01) return 'up';
+  if (changePercent < -0.01) return 'down';
+  return 'flat';
 }
 
-function IndicatorChange({ label, direction, change, unit }: { label: string; direction: 'up' | 'down' | 'flat'; change: number | null; unit?: string }) {
+interface MetricDisplayProps {
+  label: string;
+  metric: MetricSnapshot;
+  displayType: 'percent' | 'absolute';
+  unit?: string;
+}
+
+function MetricDisplay({ label, metric, displayType, unit }: MetricDisplayProps) {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [tooltipPos, setTooltipPos] = useState({ top: 0, left: 0 });
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  
+  const isMissing = metric.status === 'missing';
+  const isStale = metric.status === 'stale';
+  const direction = getDirection(metric.changePercent);
+  
   const icon = direction === 'up' ? '▲' : direction === 'down' ? '▼' : '●';
   const colorClass = direction === 'up' 
     ? 'text-emerald-400' 
@@ -47,37 +52,101 @@ function IndicatorChange({ label, direction, change, unit }: { label: string; di
     ? 'text-rose-400' 
     : 'text-amber-400';
 
-  const formattedChange = change !== null ? formatAbsoluteChange(change, 2) : '—';
+  const formattedValue = isMissing 
+    ? '—' 
+    : displayType === 'percent' 
+      ? formatPercentChange(metric.changePercent)
+      : `${formatAbsoluteChange(metric.change ?? 0, 2)}${unit || ''}`;
+
+  const handleMouseEnter = () => {
+    if (triggerRef.current && (isStale || isMissing)) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setTooltipPos({
+        top: rect.bottom + 8,
+        left: rect.left + rect.width / 2,
+      });
+      setShowTooltip(true);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setShowTooltip(false);
+  };
+
+  const tooltipContent = showTooltip && (isStale || isMissing) && mounted && (
+    createPortal(
+      <div 
+        className="fixed z-[1000] px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg shadow-lg whitespace-nowrap pointer-events-none"
+        style={{ 
+          top: tooltipPos.top, 
+          left: tooltipPos.left,
+          transform: 'translateX(-50%)',
+        }}
+      >
+        <div className="text-xs text-zinc-300">
+          {isMissing ? (
+            'Data unavailable'
+          ) : (
+            <>
+              <span className="text-amber-400">⚠ Stale data</span>
+              <br />
+              Last updated: {formatDate(metric.asOfDate)}
+            </>
+          )}
+        </div>
+        <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-zinc-800 border-l border-t border-zinc-700 rotate-45" />
+      </div>,
+      document.body
+    )
+  );
 
   return (
-    <div className="flex flex-col items-center">
-      <span className="text-xs text-zinc-500 mb-0.5">{label}</span>
-      <span className={cn('text-sm font-semibold', colorClass)}>
-        {icon} {formattedChange}{unit && change !== null ? unit : ''}
+    <div 
+      ref={triggerRef}
+      className="flex flex-col items-center min-w-[80px] relative"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      <div className="flex items-center gap-1 mb-0.5">
+        <span className="text-xs text-zinc-500">{label}</span>
+        {isStale && (
+          <AlertTriangle className="h-3 w-3 text-amber-500" />
+        )}
+      </div>
+      <span className={cn(
+        'text-sm font-semibold',
+        isMissing ? 'text-zinc-600' : colorClass,
+        isStale && 'opacity-70'
+      )}>
+        {!isMissing && icon} {formattedValue}
       </span>
+      {!isMissing && (
+        <span className={cn(
+          'text-[10px] mt-0.5',
+          isStale ? 'text-amber-500/70' : 'text-zinc-600'
+        )}>
+          {formatDate(metric.asOfDate)}
+        </span>
+      )}
+      {tooltipContent}
     </div>
   );
 }
 
-export function SnapshotRow({ 
-  goldPriceHistory, 
-  realYieldHistory, 
-  dxyHistory 
-}: SnapshotRowProps) {
-  const realYieldData = getDirectionAndChange(realYieldHistory);
-  const dxyData = getDirectionAndChange(dxyHistory);
-  const goldData = getGoldPriceData(goldPriceHistory);
+export function SnapshotRow({ snapshot }: SnapshotRowProps) {
+  const emptyMetric: MetricSnapshot = {
+    value: null,
+    change: null,
+    changePercent: null,
+    asOfDate: null,
+    source: null,
+    fresh: false,
+    status: 'missing',
+  };
 
-  const hasGoldHistory = goldPriceHistory.length >= 2;
-  const hasRealYieldHistory = realYieldHistory.length >= 2;
-  const hasDxyHistory = dxyHistory.length >= 2;
-
-  const goldIcon = goldData.direction === 'up' ? '▲' : goldData.direction === 'down' ? '▼' : '—';
-  const goldColorClass = goldData.direction === 'up'
-    ? 'text-emerald-400'
-    : goldData.direction === 'down'
-    ? 'text-rose-400'
-    : 'text-zinc-500';
+  const gold = snapshot?.gold ?? emptyMetric;
+  const realYield = snapshot?.realYield ?? emptyMetric;
+  const dxy = snapshot?.dxy ?? emptyMetric;
 
   return (
     <Card className="w-full border-zinc-800">
@@ -86,43 +155,24 @@ export function SnapshotRow({
           Market Snapshot (30D)
         </div>
         <div className="flex items-center justify-around">
-          <div className="flex flex-col items-center">
-            <span className="text-xs text-zinc-500 mb-0.5">Gold</span>
-            {hasGoldHistory ? (
-              <span className={cn('text-sm font-semibold', goldColorClass)}>
-                {goldIcon} {formatPercentChange(goldData.changePercent)}
-              </span>
-            ) : (
-              <span className="text-sm text-zinc-600">—</span>
-            )}
-          </div>
-          <div className="h-6 w-px bg-zinc-800" />
-          {hasRealYieldHistory ? (
-            <IndicatorChange 
-              label="Real Yield" 
-              direction={realYieldData.direction} 
-              change={realYieldData.change}
-              unit="%"
-            />
-          ) : (
-            <div className="flex flex-col items-center">
-              <span className="text-xs text-zinc-500 mb-0.5">Real Yield</span>
-              <span className="text-sm text-zinc-600">—</span>
-            </div>
-          )}
-          <div className="h-6 w-px bg-zinc-800" />
-          {hasDxyHistory ? (
-            <IndicatorChange 
-              label="Dollar Index" 
-              direction={dxyData.direction} 
-              change={dxyData.change}
-            />
-          ) : (
-            <div className="flex flex-col items-center">
-              <span className="text-xs text-zinc-500 mb-0.5">Dollar Index</span>
-              <span className="text-sm text-zinc-600">—</span>
-            </div>
-          )}
+          <MetricDisplay 
+            label="Gold" 
+            metric={gold} 
+            displayType="percent"
+          />
+          <div className="h-8 w-px bg-zinc-800" />
+          <MetricDisplay 
+            label="Real Yield" 
+            metric={realYield} 
+            displayType="absolute"
+            unit="%"
+          />
+          <div className="h-8 w-px bg-zinc-800" />
+          <MetricDisplay 
+            label="Dollar Index" 
+            metric={dxy} 
+            displayType="absolute"
+          />
         </div>
       </CardContent>
     </Card>

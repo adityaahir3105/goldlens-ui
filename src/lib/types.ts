@@ -109,3 +109,19 @@ export interface EtfFlowResponse {
   source: string;
   points: EtfFlowPoint[];
 }
+
+export interface MetricSnapshot {
+  value: number | null;
+  change: number | null;
+  changePercent: number | null;
+  asOfDate: string | null;
+  source: string | null;
+  fresh: boolean;
+  status: 'fresh' | 'stale' | 'missing';
+}
+
+export interface MarketSnapshot {
+  gold: MetricSnapshot;
+  realYield: MetricSnapshot;
+  dxy: MetricSnapshot;
+}

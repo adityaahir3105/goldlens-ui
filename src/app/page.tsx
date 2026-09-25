@@ -11,6 +11,7 @@ import {
   getLatestIndicatorValue,
   getLatestSignal,
   getIndicatorHistory,
+  getMarketSnapshot,
 } from '@/lib/api';
 import { IndicatorWithData, SignalColor } from '@/lib/types';
 import { GoldPriceCard } from '@/components/cards/GoldPriceCard';
@@ -23,11 +24,12 @@ import { GoldNewsSection } from '@/components/cards/GoldNewsSection';
 import { GoldETFWorldSectionServer } from '@/components/world';
 
 async function fetchDashboardData() {
-  const [goldPrice, goldPriceHistory, goldRisk, indicators] = await Promise.all([
+  const [goldPrice, goldPriceHistory, goldRisk, indicators, marketSnapshot] = await Promise.all([
     getLatestGoldPrice(),
     getGoldPriceHistory(30),
     getLatestGoldRisk(),
     getIndicators(),
+    getMarketSnapshot(30),
   ]);
 
   const indicatorsWithData: IndicatorWithData[] = await Promise.all(
@@ -61,8 +63,7 @@ async function fetchDashboardData() {
     indicatorsWithData, 
     realYieldSignal,
     dxySignal,
-    realYieldHistory,
-    dxyHistory,
+    marketSnapshot,
   };
 }
 
@@ -74,8 +75,7 @@ export default async function DashboardPage() {
     indicatorsWithData, 
     realYieldSignal,
     dxySignal,
-    realYieldHistory,
-    dxyHistory,
+    marketSnapshot,
   } = await fetchDashboardData();
 
   return (
@@ -86,17 +86,9 @@ export default async function DashboardPage() {
       </section>
 
       {/* Market Snapshot Section */}
-      {(goldPriceHistory.length >= 2 || realYieldHistory.length >= 2 || dxyHistory.length >= 2) && (
-        <section className="mb-16">
-          <SnapshotRow 
-            goldPriceHistory={goldPriceHistory}
-            realYieldSignal={realYieldSignal}
-            dxySignal={dxySignal}
-            realYieldHistory={realYieldHistory}
-            dxyHistory={dxyHistory}
-          />
-        </section>
-      )}
+      <section className="mb-16">
+        <SnapshotRow snapshot={marketSnapshot} />
+      </section>
 
       {/* Risk Overview & Drivers Section */}
       <section className="mb-16">

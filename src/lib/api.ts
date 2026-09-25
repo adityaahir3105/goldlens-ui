@@ -138,8 +138,12 @@ export async function getGoldNews(): Promise<GoldNewsResponse | null> {
   return fetchApi<GoldNewsResponse>('/api/news/gold');
 }
 
-import { EtfFlowResponse } from './types';
+import { EtfFlowResponse, MarketSnapshot } from './types';
 
 export async function getEtfFlows(months: number = 24): Promise<EtfFlowResponse | null> {
   return fetchApi<EtfFlowResponse>(`/api/gold/etf/flows?months=${months}`);
+}
+
+export async function getMarketSnapshot(days: number = 30): Promise<MarketSnapshot | null> {
+  return fetchApi<MarketSnapshot>(`/api/market/snapshot?days=${days}`);
 }

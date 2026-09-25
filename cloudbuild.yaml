@@ -1,0 +1,12 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '--build-arg'
+      - 'NEXT_PUBLIC_API_BASE=https://goldlens-core-615101519146.asia-south1.run.app'
+      - '-t'
+      - 'asia-south1-docker.pkg.dev/goldlens-app-2026/goldlens-repo/goldlens-ui:${SHORT_SHA}'
+      - '.'
+images:
+  - 'asia-south1-docker.pkg.dev/goldlens-app-2026/goldlens-repo/goldlens-ui:${SHORT_SHA}'
+timeout: 900s
