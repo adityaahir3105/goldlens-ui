@@ -1,0 +1,3 @@
+numpy>=1.26
+# Only needed for --model timesfm-2.5 / timesfm-3.0 (downloads weights from Hugging Face).
+timesfm[torch]>=3.0.2

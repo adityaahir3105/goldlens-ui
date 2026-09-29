@@ -18,6 +18,7 @@ A production-quality macro risk analytics dashboard for gold market exposure ana
 - **AI Explainability** - Expandable sections explaining risk assessments and indicator meanings
 - **Server-Side Rendering** - SSR for fast initial load without flicker
 - **Graceful Error Handling** - Friendly messages when data is unavailable
+- **Rewind Lab** (`/rewind`) - Backtest of a time-series foundation model (TimesFM) on gold: rewind to any past day, compare the model's forecast with what happened and with a "no change" guess, or play "Beat the model"
 
 ## Project Structure
 
@@ -97,6 +98,27 @@ The dashboard consumes the following REST endpoints:
 | `/api/gold-price/latest` | GET | Latest gold spot price |
 | `/api/gold/price/history` | GET | Gold price history (30D) |
 | `/api/indicators/{code}/history` | GET | Indicator history (30D) |
+
+## Rewind Lab backtest
+
+The Rewind Lab page reads a precomputed backtest from `src/data/rewind/gold-backtest.json`.
+The committed file is **sample data** (synthetic prices and a toy model) so the page works
+out of the box. Generate the real one with TimesFM:
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+pip install -r scripts/rewind/requirements.txt
+
+# TimesFM 2.5 on the backend's gold history (weights download from Hugging Face)
+python scripts/rewind/precompute_backtest.py --source api --api-base "$NEXT_PUBLIC_API_BASE"
+
+# Or a longer history from a CSV with a header row: date,value
+python scripts/rewind/precompute_backtest.py --source csv --csv gold.csv
+```
+
+Then rebuild the app. Only past days whose outcome is already known are written, so the page
+never shows a forward-looking forecast. `--model timesfm-3.0` is available for experiments,
+but its weights are licensed for non-commercial, non-production use only.
 
 ## Deployment
 
