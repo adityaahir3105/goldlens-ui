@@ -19,6 +19,9 @@ A production-quality macro risk analytics dashboard for gold market exposure ana
 - **Server-Side Rendering** - SSR for fast initial load without flicker
 - **Graceful Error Handling** - Friendly messages when data is unavailable
 - **Rewind Lab** (`/rewind`) - Backtest of a time-series foundation model (TimesFM) on gold: rewind to any past day, compare the model's forecast with what happened and with a "no change" guess, or play "Beat the model"
+- **Central-bank globe** (dashboard) - Interactive 3D globe of net central-bank gold buying and selling by country (World Gold Council figures)
+- **History** (`/history`) - Gold prices since 1833 with key events, log/linear and inflation-adjusted views, a story mode, and upcoming scheduled events
+- **Gold Duel** (`/duel`) - A 10-round game: you and a TimesFM-driven AI split credits between gold and cash over a hidden stretch of real prices
 
 ## Project Structure
 
@@ -101,9 +104,8 @@ The dashboard consumes the following REST endpoints:
 
 ## Rewind Lab backtest
 
-The Rewind Lab page reads a precomputed backtest from `src/data/rewind/gold-backtest.json`.
-The committed file is **sample data** (synthetic prices and a toy model) so the page works
-out of the box. Generate the real one with TimesFM:
+The Rewind Lab page and Gold Duel read a precomputed backtest from
+`src/data/rewind/gold-backtest.json`. Generate or refresh it with TimesFM:
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
@@ -124,6 +126,18 @@ python scripts/rewind/precompute_backtest.py --source api --api-base "$NEXT_PUBL
 Then rebuild the app. Only past days whose outcome is already known are written, so the page
 never shows a forward-looking forecast. `--model timesfm-3.0` is available for experiments,
 but its weights are licensed for non-commercial, non-production use only.
+
+## History and globe data
+
+- `src/data/history/gold-history.json` holds monthly gold prices (World Bank Pink Sheet from 1960,
+  annual Timothy Green figures before that) and the same prices in today's dollars (US CPI-U).
+  Refresh it with `python scripts/history/build_gold_history.py` (no API key needed).
+- `src/data/history/events.ts` (historical events) and `src/data/history/upcoming.ts` (scheduled
+  events, each with a source link) are curated by hand. Past upcoming events hide themselves;
+  review the list when it runs low.
+- `src/data/globe/central-bank-gold.ts` holds net central-bank purchases by country as reported
+  by the World Gold Council, with the source for each period. Countries not named in those
+  summaries are left out rather than shown as zero.
 
 ## Deployment
 

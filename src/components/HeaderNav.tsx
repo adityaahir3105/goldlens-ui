@@ -6,6 +6,8 @@ import { cn } from '@/lib/utils';
 
 const LINKS = [
   { href: '/', label: 'Dashboard' },
+  { href: '/history', label: 'History' },
+  { href: '/duel', label: 'Gold Duel' },
   { href: '/rewind', label: 'Rewind Lab' },
 ];
 
@@ -22,7 +24,7 @@ export function HeaderNav() {
             href={href}
             aria-current={active ? 'page' : undefined}
             className={cn(
-              'rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors sm:text-sm',
+              'whitespace-nowrap rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors sm:text-sm',
               active ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
             )}
           >
