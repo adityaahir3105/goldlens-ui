@@ -3,13 +3,23 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Dices, Pause, Play } from 'lucide-react';
-import { RewindData, getOutcome, scoreOutcomes, formatUsd } from '@/lib/rewind';
+import {
+  RewindData,
+  buildRace,
+  formatUsd,
+  getOutcome,
+  getVerdict,
+  independentWindows,
+  scoreOutcomes,
+  withinCoinFlipNoise,
+} from '@/lib/rewind';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/Card';
 import { RewindChart, REWIND_COLORS, buildRows, longDate } from './RewindChart';
-import { TimelineScrubber } from './TimelineScrubber';
-import { ScoreBoard } from './ScoreBoard';
 import { DayDetail } from './DayDetail';
+import { HistoryScrubber } from './HistoryScrubber';
+import { RaceChart } from './RaceChart';
+import { Verdict } from './Verdict';
 
 type Mode = 'explore' | 'challenge';
 
@@ -105,6 +115,9 @@ export function RewindLab({ data }: { data: RewindData }) {
     [data, horizon]
   );
   const score = useMemo(() => scoreOutcomes(outcomes), [outcomes]);
+  const verdict = getVerdict(score);
+  const windows = independentWindows(data, horizon);
+  const race = useMemo(() => buildRace(outcomes), [outcomes]);
 
   const last = outcomes.length - 1;
   const forecast = data.forecasts[selected];
@@ -155,6 +168,10 @@ export function RewindLab({ data }: { data: RewindData }) {
     setPlaying(true);
   };
 
+  // Same window the detail chart shows (see buildRows), highlighted on the 5-year chart.
+  const windowStart = Math.max(0, forecast.cutoffIndex - (horizon * 3 + 20));
+  const windowEnd = forecast.cutoffIndex + horizon;
+
   const tableRows = useMemo(
     () => buildRows(data, forecast, horizon, showFuture),
     [data, forecast, horizon, showFuture]
@@ -162,6 +179,17 @@ export function RewindLab({ data }: { data: RewindData }) {
 
   return (
     <div className="space-y-6">
+      <Card className="p-5 md:p-7 border-gold/20">
+        <Verdict
+          verdict={verdict}
+          score={score}
+          horizon={horizon}
+          modelLabel={data.meta.model.label}
+          windows={windows}
+          directionIsNoise={withinCoinFlipNoise(score.directionHitRate, windows)}
+        />
+      </Card>
+
       <div className="flex flex-wrap items-center gap-3">
         <Segmented
           label="Mode"
@@ -197,6 +225,27 @@ export function RewindLab({ data }: { data: RewindData }) {
         )}
       </div>
 
+      <Card className="p-4 md:p-5">
+        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
+            {data.series[0].date.slice(0, 4)}–{data.series[data.series.length - 1].date.slice(0, 4)} · click anywhere to rewind
+          </h3>
+          <span className="text-xs text-zinc-500">
+            {formatUsd(data.series[0].value)} → {formatUsd(data.series[data.series.length - 1].value)}
+          </span>
+        </div>
+        <HistoryScrubber
+          series={data.series}
+          forecasts={data.forecasts}
+          selected={selected}
+          onSelect={select}
+          horizon={horizon}
+          windowStart={windowStart}
+          windowEnd={windowEnd}
+          concealFuture={mode === 'challenge' && guess === null}
+        />
+      </Card>
+
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2 p-4 md:p-5">
           <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-400">
@@ -212,14 +261,6 @@ export function RewindLab({ data }: { data: RewindData }) {
             showFuture={showFuture}
             animateReveal={mode === 'challenge' && !reduceMotion}
           />
-          <div className="mt-4">
-            <TimelineScrubber
-              outcomes={outcomes}
-              selected={selected}
-              onSelect={select}
-              concealResults={mode === 'challenge'}
-            />
-          </div>
           <details className="mt-4 text-xs text-zinc-400">
             <summary className="cursor-pointer select-none text-zinc-500 hover:text-zinc-300">
               Show this chart as a table
@@ -324,10 +365,16 @@ export function RewindLab({ data }: { data: RewindData }) {
         </Card>
       </div>
 
-      <Card className="p-5 md:p-6">
-        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400">Scoreboard</h3>
-        <ScoreBoard score={score} horizon={horizon} modelLabel={data.meta.model.label} />
-      </Card>
+      {/* Hidden while guessing: the race would give away how each rewind turned out. */}
+      {mode === 'explore' && (
+        <Card className="p-5 md:p-6">
+          <RaceChart race={race} selected={selected} onSelect={select} modelLabel={data.meta.model.label} />
+          <p className="mt-4 text-[11px] leading-relaxed text-zinc-600">
+            Neighbouring rewinds share most of their future, so the {score.count} rewinds amount to about {windows}{' '}
+            independent {horizon}-day tests. Treat small differences as noise.
+          </p>
+        </Card>
+      )}
     </div>
   );
 }

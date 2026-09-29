@@ -150,3 +150,61 @@ export function formatUsd(value: number, decimals = 0): string {
 export function formatPct(value: number, decimals = 0): string {
   return `${(value * 100).toFixed(decimals)}%`;
 }
+
+// Within this band the two are called a tie: the rewinds overlap heavily, so a 1-2% gap in
+// average error is not a result.
+const TIE_BAND = 0.02;
+
+export type VerdictKind = 'tie' | 'model' | 'naive';
+
+export interface Verdict {
+  kind: VerdictKind;
+  headline: string;
+  margin: number;
+}
+
+export function getVerdict(score: RewindScore): Verdict {
+  const margin = Math.abs(score.skill);
+  if (margin < TIE_BAND) return { kind: 'tie', headline: 'A tie.', margin };
+  return score.skill > 0
+    ? { kind: 'model', headline: `The model wins by ${formatPct(margin)}.`, margin }
+    : { kind: 'naive', headline: `"No change" wins by ${formatPct(margin)}.`, margin };
+}
+
+/**
+ * Number of non-overlapping forecast windows the rewinds span. Neighbouring rewinds share most
+ * of their future, so this - not the rewind count - is the sample size for significance.
+ */
+export function independentWindows(data: RewindData, horizon: number): number {
+  const first = data.forecasts[0]?.cutoffIndex ?? 0;
+  const last = data.forecasts[data.forecasts.length - 1]?.cutoffIndex ?? 0;
+  return Math.max(1, Math.floor((last - first) / horizon) + 1);
+}
+
+/** True when a hit rate is within two standard errors of a coin flip. */
+export function withinCoinFlipNoise(hitRate: number, windows: number): boolean {
+  const standardError = Math.sqrt(0.25 / windows);
+  return Math.abs(hitRate - 0.5) < 2 * standardError;
+}
+
+export interface RacePoint {
+  date: string;
+  // Running total of dollars by which the model's median was closer than "no change".
+  lead: number;
+  // lead split at zero, so each side can be filled in its own colour
+  ahead: number;
+  behind: number;
+}
+
+export function buildRace(outcomes: RewindOutcome[]): RacePoint[] {
+  let lead = 0;
+  return outcomes.map((o) => {
+    lead += o.edge;
+    return {
+      date: o.cutoffDate,
+      lead,
+      ahead: Math.max(lead, 0),
+      behind: Math.min(lead, 0),
+    };
+  });
+}

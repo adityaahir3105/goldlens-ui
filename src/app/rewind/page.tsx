@@ -22,10 +22,13 @@ export default function RewindPage() {
           Experiment
         </div>
         <h2 className="mt-2 text-3xl font-bold text-zinc-100">Rewind Lab</h2>
-        <p className="mt-3 max-w-3xl text-sm leading-relaxed text-zinc-400">
-          Pick any day in the past. The forecasting model only sees gold prices up to that day, then
-          draws its best guess and an 80% range for the weeks ahead. Reveal what really happened and
-          check whether it did better than the simplest guess of all: &ldquo;the price won&rsquo;t change&rdquo;.
+        <p className="mt-3 max-w-3xl text-lg leading-relaxed text-zinc-200">
+          Can a state-of-the-art forecasting AI beat the simplest guess of all, &ldquo;the price won&rsquo;t change&rdquo;?
+        </p>
+        <p className="mt-2 max-w-3xl text-sm leading-relaxed text-zinc-400">
+          We rewound to hundreds of past days. Each time the model saw only the gold prices known that day,
+          forecast the weeks ahead, and was scored against what really happened. Click anywhere on the chart
+          to rewind yourself, or play &ldquo;Beat the model&rdquo;.
         </p>
         <div className="mt-4 flex flex-wrap gap-2 text-xs text-zinc-400">
           <span className="rounded-full border border-zinc-800 bg-zinc-900/60 px-3 py-1">
