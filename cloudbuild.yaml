@@ -3,7 +3,7 @@ steps:
     args:
       - 'build'
       - '--build-arg'
-      - 'NEXT_PUBLIC_API_BASE=https://goldlens-core-615101519146.asia-south1.run.app'
+      - 'NEXT_PUBLIC_API_BASE=https://goldlens-core-218151360173.asia-south1.run.app'
       - '-t'
       - 'asia-south1-docker.pkg.dev/goldlens-app-2026/goldlens-repo/goldlens-ui:${SHORT_SHA}'
       - '.'
