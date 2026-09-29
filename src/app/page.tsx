@@ -21,7 +21,7 @@ import { SnapshotRow } from '@/components/cards/SnapshotRow';
 import { IndicatorCard } from '@/components/cards/IndicatorCard';
 import { DashboardClient } from '@/components/DashboardClient';
 import { GoldNewsSection } from '@/components/cards/GoldNewsSection';
-import { GoldETFWorldSectionServer } from '@/components/world';
+import { GoldGlobeSection } from '@/components/globe/GoldGlobeSection';
 
 async function fetchDashboardData() {
   const [goldPrice, goldPriceHistory, goldRisk, indicators, marketSnapshot] = await Promise.all([
@@ -128,8 +128,8 @@ export default async function DashboardPage() {
       {/* Gold Market News Section */}
       <GoldNewsSection />
 
-      {/* Global Gold ETF Flows Section */}
-      <GoldETFWorldSectionServer />
+      {/* Central-bank gold globe */}
+      <GoldGlobeSection />
     </div>
   );
 }
