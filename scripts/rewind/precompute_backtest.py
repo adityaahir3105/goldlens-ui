@@ -71,11 +71,24 @@ Forecaster = Callable[[list[np.ndarray], int], tuple[np.ndarray, np.ndarray, np.
 
 
 def clean(dates: list[str], values: list[float], source: str) -> Series:
+    """Sorts, de-duplicates and keeps weekdays only.
+
+    Spot gold doesn't trade at weekends. gold-api.com's daily history still has Saturday and
+    Sunday rows (thin off-hours quotes), which made "N trading days ahead" mean N calendar
+    days and flattered the no-change baseline.
+    """
     by_date: dict[str, float] = {}
+    weekend = 0
     for d, v in zip(dates, values):
         if v is None or not math.isfinite(v) or v <= 0:
             continue
-        by_date[d[:10]] = float(v)
+        day = d[:10]
+        if dt.date.fromisoformat(day).weekday() >= 5:
+            weekend += 1
+            continue
+        by_date[day] = float(v)
+    if weekend:
+        print(f"  dropped {weekend} weekend rows", file=sys.stderr)
     ordered = sorted(by_date.items())
     return Series([d for d, _ in ordered], np.array([v for _, v in ordered]), source)
 
