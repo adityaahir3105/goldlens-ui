@@ -109,11 +109,16 @@ out of the box. Generate the real one with TimesFM:
 python -m venv .venv && source .venv/bin/activate
 pip install -r scripts/rewind/requirements.txt
 
-# TimesFM 2.5 on the backend's gold history (weights download from Hugging Face)
-python scripts/rewind/precompute_backtest.py --source api --api-base "$NEXT_PUBLIC_API_BASE"
+# Recommended: years of daily history from gold-api.com (free tier: 10 requests/hour,
+# one request per year of history), saved to CSV so re-runs don't spend requests
+read -rs GOLD_API_COM_KEY && export GOLD_API_COM_KEY
+python scripts/rewind/precompute_backtest.py --source gold-api-com --years 5 --save-csv gold-history.csv
 
-# Or a longer history from a CSV with a header row: date,value
-python scripts/rewind/precompute_backtest.py --source csv --csv gold.csv
+# Re-run from the saved CSV (e.g. to try --model timesfm-3.0 or another --horizon)
+python scripts/rewind/precompute_backtest.py --source csv --csv gold-history.csv
+
+# Or the backend's own gold history (only a few months, so few rewind days)
+python scripts/rewind/precompute_backtest.py --source api --api-base "$NEXT_PUBLIC_API_BASE"
 ```
 
 Then rebuild the app. Only past days whose outcome is already known are written, so the page

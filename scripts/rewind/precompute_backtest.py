@@ -14,6 +14,10 @@ Examples:
   python scripts/rewind/precompute_backtest.py --source api \
       --api-base "$NEXT_PUBLIC_API_BASE" --model timesfm-2.5
 
+  # Years of daily history from gold-api.com (key in GOLD_API_COM_KEY; free tier: 10 req/hour)
+  python scripts/rewind/precompute_backtest.py --source gold-api-com --years 5 \
+      --save-csv gold-history.csv
+
   # Your own longer history (CSV with a header row: date,value)
   python scripts/rewind/precompute_backtest.py --source csv --csv gold.csv
 
@@ -30,6 +34,7 @@ import json
 import math
 import os
 import sys
+import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from typing import Callable
@@ -85,6 +90,91 @@ def load_from_api(api_base: str, days: int) -> Series:
         [p.get("value") for p in points],
         f"GoldLens backend, last {days} days",
     )
+
+
+GOLD_API_COM_URL = "https://api.gold-api.com/history"
+DATE_FIELDS = ("day", "date", "period", "timestamp", "time")
+PRICE_FIELDS = ("avg_price", "price", "close", "max_price", "min_price")
+
+
+def _parse_day(value) -> str | None:
+    """gold-api.com's docs don't pin the format: accept ISO strings or Unix seconds/millis."""
+    if value is None:
+        return None
+    if isinstance(value, (int, float)) or (isinstance(value, str) and value.isdigit()):
+        ts = float(value)
+        if ts > 1e11:  # milliseconds
+            ts /= 1000
+        return dt.datetime.fromtimestamp(ts, dt.timezone.utc).date().isoformat()
+    text = str(value)
+    return text[:10] if len(text) >= 10 else None
+
+
+def parse_gold_api_com(payload) -> tuple[list[str], list[float]]:
+    rows = payload
+    if isinstance(payload, dict):  # tolerate a wrapper object
+        rows = next((v for v in payload.values() if isinstance(v, list)), [])
+    dates, values = [], []
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        day = next((_parse_day(row[k]) for k in DATE_FIELDS if k in row), None)
+        price = next((row[k] for k in PRICE_FIELDS if row.get(k) is not None), None)
+        if day is None or price is None:
+            continue
+        try:
+            values.append(float(price))
+        except (TypeError, ValueError):
+            continue
+        dates.append(day)
+    return dates, values
+
+
+def load_from_gold_api_com(years: int, api_key: str) -> Series:
+    """Daily average XAU prices, fetched one year per request, newest year first.
+
+    Stops at the first year that returns no data, so it reports how far back the
+    plan actually goes instead of assuming.
+    """
+    end = dt.datetime.now(dt.timezone.utc)
+    all_dates: list[str] = []
+    all_values: list[float] = []
+    for i in range(years):
+        chunk_end = end - dt.timedelta(days=365 * i)
+        chunk_start = chunk_end - dt.timedelta(days=365)
+        query = urllib.parse.urlencode({
+            "symbol": "XAU",
+            "groupBy": "day",
+            "aggregation": "avg",
+            "orderBy": "asc",
+            "startTimestamp": int(chunk_start.timestamp()),
+            "endTimestamp": int(chunk_end.timestamp()),
+        })
+        req = urllib.request.Request(
+            f"{GOLD_API_COM_URL}?{query}",
+            headers={"x-api-key": api_key, "User-Agent": "goldlens-rewind/1.0"},
+        )
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            payload = json.load(resp)
+        dates, values = parse_gold_api_com(payload)
+        if not dates:
+            sample = json.dumps(payload)[:300]
+            print(f"  {chunk_start.date()}..{chunk_end.date()}: no rows (response: {sample})", file=sys.stderr)
+            break
+        print(f"  {chunk_start.date()}..{chunk_end.date()}: {len(dates)} days", file=sys.stderr)
+        all_dates += dates
+        all_values += values
+    if not all_dates:
+        raise SystemExit("gold-api.com returned no usable rows; see the response printed above.")
+    return clean(all_dates, all_values, "gold-api.com daily average (XAU/USD)")
+
+
+def save_csv(series: Series, path: str) -> None:
+    with open(path, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["date", "value"])
+        writer.writerows(zip(series.dates, (round(float(v), 2) for v in series.values)))
+    print(f"Saved {len(series.dates)} rows to {path}", file=sys.stderr)
 
 
 def load_from_csv(path: str) -> Series:
@@ -255,10 +345,12 @@ def run_backtest(
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--source", choices=["api", "csv", "synthetic"], default="api")
+    ap.add_argument("--source", choices=["api", "gold-api-com", "csv", "synthetic"], default="api")
     ap.add_argument("--api-base", default=os.environ.get("NEXT_PUBLIC_API_BASE"))
     ap.add_argument("--days", type=int, default=365, help="history to request from the API")
     ap.add_argument("--csv", help="CSV with a header row: date,value")
+    ap.add_argument("--years", type=int, default=5, help="gold-api-com: years of history to request")
+    ap.add_argument("--save-csv", help="also write the loaded history to this CSV (date,value)")
     ap.add_argument("--synthetic-days", type=int, default=320)
     ap.add_argument("--seed", type=int, default=29)
     ap.add_argument("--model", choices=["timesfm-2.5", "timesfm-3.0", "toy-momentum"], default="timesfm-2.5")
@@ -275,13 +367,21 @@ def main() -> None:
         if not args.api_base:
             ap.error("--api-base (or NEXT_PUBLIC_API_BASE) is required for --source api")
         series = load_from_api(args.api_base, args.days)
+    elif args.source == "gold-api-com":
+        key = os.environ.get("GOLD_API_COM_KEY")
+        if not key:
+            ap.error("set GOLD_API_COM_KEY for --source gold-api-com")
+        series = load_from_gold_api_com(args.years, key)
     elif args.source == "csv":
         if not args.csv:
             ap.error("--csv is required for --source csv")
         series = load_from_csv(args.csv)
     else:
         series = make_synthetic(args.synthetic_days, args.seed)
-    print(f"Loaded {len(series.values)} points from {series.source}", file=sys.stderr)
+    print(f"Loaded {len(series.values)} points from {series.source}"
+          f" ({series.dates[0]} to {series.dates[-1]})", file=sys.stderr)
+    if args.save_csv:
+        save_csv(series, args.save_csv)
 
     if args.model == "timesfm-2.5":
         forecaster, info = timesfm_2p5(args.max_context, args.horizon, args.batch_size)
