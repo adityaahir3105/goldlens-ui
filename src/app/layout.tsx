@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
+import { HeaderNav } from '@/components/HeaderNav';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -53,7 +54,8 @@ export default function RootLayout({
                 </div>
               </div>
               <div className="flex items-center gap-4">
-                <span className="flex items-center gap-2 text-xs text-zinc-500">
+                <HeaderNav />
+                <span className="hidden sm:flex items-center gap-2 text-xs text-zinc-500">
                   <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
                   Live
                 </span>

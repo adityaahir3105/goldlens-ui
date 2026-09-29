@@ -9,10 +9,14 @@
   --font-mono: var(--font-geist-mono);
 }
 
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
+/* Must stay inside a layer: unlayered rules beat Tailwind utilities, which
+   would zero out every p-* / m-* / space-y-* class in the app. */
+@layer base {
+  * {
+    box-sizing: border-box;
+    padding: 0;
+    margin: 0;
+  }
 }
 
 html,
