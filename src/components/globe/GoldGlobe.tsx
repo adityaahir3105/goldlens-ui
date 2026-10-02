@@ -209,7 +209,10 @@ export function GoldGlobe({ entries, selectedId, hoveredId, onHover, onSelect, s
       const center: [number, number] = [-rotation.current[0], -rotation.current[1]];
       const visible = entries
         .map((e) => ({ e, at: anchors.current.get(e.id) }))
-        .filter((x): x is { e: GlobeEntry; at: [number, number] } => !!x.at && geoDistance(x.at, center) < Math.PI / 2 - 0.05)
+        .filter(
+          (x): x is { e: GlobeEntry; at: [number, number] } =>
+            !!x.at && x.e.tonnes !== 0 && geoDistance(x.at, center) < Math.PI / 2 - 0.05
+        )
         .sort((a, b) => geoDistance(b.at, center) - geoDistance(a.at, center));
 
       for (const { e, at } of visible) {
@@ -267,7 +270,7 @@ export function GoldGlobe({ entries, selectedId, hoveredId, onHover, onSelect, s
 
     for (const e of entries) {
       const at = anchors.current.get(e.id);
-      if (!at || geoDistance(at, center) >= Math.PI / 2 - 0.05) continue;
+      if (!at || e.tonnes === 0 || geoDistance(at, center) >= Math.PI / 2 - 0.05) continue;
       const height = 0.04 + MAX_SPIKE * Math.sqrt(Math.abs(e.tonnes) / maxAbs);
       const base = projection(at);
       const top = geoOrthographic().rotate(rotation.current).scale(r * (1 + height)).translate([cx, cy]).clipAngle(90)(at);
@@ -326,7 +329,7 @@ export function GoldGlobe({ entries, selectedId, hoveredId, onHover, onSelect, s
       <canvas
         ref={canvasRef}
         role="img"
-        aria-label="Globe of central-bank gold buying and selling. The same figures are listed beside it."
+        aria-label="Globe of official gold reserves by country. The same figures are listed beside it."
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}

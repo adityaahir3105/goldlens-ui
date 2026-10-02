@@ -3,22 +3,37 @@
 import { useMemo, useState } from 'react';
 import { ExternalLink, Pause, Play } from 'lucide-react';
 import { GLOBE_PERIODS, GLOBE_REVIEWED } from '@/data/globe/central-bank-gold';
-import { GLOBE_COLORS, formatTonnes } from '@/lib/globe';
+import { GOLD_HOLDINGS, HOLDINGS_REVIEWED } from '@/data/globe/gold-holdings';
+import { GLOBE_COLORS, GlobePeriod, formatTonnes, monthLabel } from '@/lib/globe';
 import { eventDateLabel } from '@/lib/history';
 import { cn } from '@/lib/utils';
 import { GoldGlobe } from './GoldGlobe';
 
+const PERIODS: GlobePeriod[] = [GOLD_HOLDINGS, ...GLOBE_PERIODS];
+
+type SortKey = 'tonnes' | 'name';
+
 export function GoldGlobeSection() {
-  const [periodId, setPeriodId] = useState(GLOBE_PERIODS[0].id);
+  const [periodId, setPeriodId] = useState(PERIODS[0].id);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [spinning, setSpinning] = useState(true);
+  const [sortKey, setSortKey] = useState<SortKey>('tonnes');
+  const [query, setQuery] = useState('');
 
-  const period = GLOBE_PERIODS.find((p) => p.id === periodId) ?? GLOBE_PERIODS[0];
+  const period = PERIODS.find((p) => p.id === periodId) ?? PERIODS[0];
+  const holdings = period.kind === 'holdings';
   const ranked = useMemo(() => [...period.entries].sort((a, b) => b.tonnes - a.tonnes), [period]);
+  const rankOf = useMemo(() => new Map(ranked.map((e, i) => [e.id, i + 1])), [ranked]);
+  const listed = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const rows = q ? ranked.filter((e) => e.name.toLowerCase().includes(q)) : ranked;
+    return sortKey === 'name' ? [...rows].sort((a, b) => a.name.localeCompare(b.name)) : rows;
+  }, [ranked, query, sortKey]);
   const maxAbs = Math.max(1, ...ranked.map((e) => Math.abs(e.tonnes)));
   const bought = ranked.filter((e) => e.tonnes > 0).reduce((s, e) => s + e.tonnes, 0);
   const sold = ranked.filter((e) => e.tonnes < 0).reduce((s, e) => s - e.tonnes, 0);
+  const colorOf = (tonnes: number) => (tonnes >= 0 ? GLOBE_COLORS.buy : GLOBE_COLORS.sell);
 
   const focusId = hoveredId ?? selectedId;
   const focused = ranked.find((e) => e.id === focusId) ?? null;
@@ -34,21 +49,24 @@ export function GoldGlobeSection() {
     setPeriodId(id);
     setSelectedId(null);
     setHoveredId(null);
+    setQuery('');
   };
 
   return (
     <section className="mt-20 mb-24">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="mb-2 text-xs font-medium uppercase tracking-widest text-zinc-500">Who is buying gold?</p>
+          <p className="mb-2 text-xs font-medium uppercase tracking-widest text-zinc-500">
+            {holdings ? 'Who holds gold?' : 'Who is buying gold?'}
+          </p>
           <h2 className="text-2xl font-bold text-zinc-100">Central banks, country by country</h2>
           <p className="mt-2 max-w-2xl text-sm text-zinc-400">
-            Net change in official gold reserves. Drag to spin the globe, and hover or tap a country, or pick one
-            from the list.
+            {holdings ? 'Total official gold reserves.' : 'Net change in official gold reserves.'} Drag to spin the
+            globe, and hover or tap a country, or pick one from the list.
           </p>
         </div>
-        <div className="flex rounded-lg border border-zinc-800 bg-zinc-900/60 p-1" role="tablist" aria-label="Period">
-          {GLOBE_PERIODS.map((p) => (
+        <div className="flex flex-wrap rounded-lg border border-zinc-800 bg-zinc-900/60 p-1" role="tablist" aria-label="Period">
+          {PERIODS.map((p) => (
             <button
               key={p.id}
               role="tab"
@@ -71,21 +89,29 @@ export function GoldGlobeSection() {
           <div className="pointer-events-none relative z-10 mb-2 min-h-[76px] rounded-lg border border-zinc-800 bg-zinc-950/85 px-3 py-2 backdrop-blur-sm sm:absolute sm:left-4 sm:top-4 sm:mb-0 sm:max-w-[260px]">
             {focused ? (
               <>
-                <div className="text-xs text-zinc-500">{period.range}</div>
+                <div className="text-xs text-zinc-500">
+                  {holdings && focused.asOf ? `Holdings, ${monthLabel(focused.asOf)}` : period.range}
+                </div>
                 <div className="text-sm font-semibold text-zinc-100">{focused.name}</div>
-                <div className="text-2xl font-bold" style={{ color: focused.tonnes >= 0 ? GLOBE_COLORS.buy : GLOBE_COLORS.sell }}>
-                  {formatTonnes(focused.tonnes)}
+                <div className="text-2xl font-bold" style={{ color: colorOf(focused.tonnes) }}>
+                  {formatTonnes(focused.tonnes, !holdings)}
                 </div>
                 {focused.note && <p className="mt-1 text-xs leading-relaxed text-zinc-400">{focused.note}</p>}
               </>
             ) : (
               <>
                 <div className="text-xs text-zinc-500">{period.range}</div>
-                <div className="mt-1 text-sm text-zinc-300">
-                  <span className="font-semibold" style={{ color: GLOBE_COLORS.buy }}>{formatTonnes(bought)}</span> bought,{' '}
-                  <span className="font-semibold" style={{ color: GLOBE_COLORS.sell }}>{formatTonnes(-sold)}</span> sold
-                </div>
-                <div className="text-xs text-zinc-500">by the countries listed</div>
+                {holdings ? (
+                  <div className="mt-1 text-sm text-zinc-300">
+                    <span className="font-semibold" style={{ color: GLOBE_COLORS.buy }}>{formatTonnes(bought, false)}</span> held
+                  </div>
+                ) : (
+                  <div className="mt-1 text-sm text-zinc-300">
+                    <span className="font-semibold" style={{ color: GLOBE_COLORS.buy }}>{formatTonnes(bought)}</span> bought,{' '}
+                    <span className="font-semibold" style={{ color: GLOBE_COLORS.sell }}>{formatTonnes(-sold)}</span> sold
+                  </div>
+                )}
+                <div className="text-xs text-zinc-500">by the {ranked.length} listed</div>
               </>
             )}
           </div>
@@ -110,23 +136,60 @@ export function GoldGlobeSection() {
           </button>
 
           <div className="absolute bottom-4 left-4 flex gap-3 text-[11px] text-zinc-400">
-            <span className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-sm" style={{ background: GLOBE_COLORS.buy }} /> Bought
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-sm" style={{ background: GLOBE_COLORS.sell }} /> Sold
-            </span>
+            {holdings ? (
+              <span className="flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-sm" style={{ background: GLOBE_COLORS.buy }} /> Brighter holds more
+              </span>
+            ) : (
+              <>
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-sm" style={{ background: GLOBE_COLORS.buy }} /> Bought
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-sm" style={{ background: GLOBE_COLORS.sell }} /> Sold
+                </span>
+              </>
+            )}
           </div>
         </div>
 
         <div className="lg:col-span-2">
-          <ol className="space-y-1" aria-label={`Central-bank gold, ${period.range}`}>
-            {ranked.map((e, i) => {
+          <div className="mb-2 flex items-center gap-2">
+            {ranked.length > 12 && (
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Find a country"
+                aria-label="Find a country"
+                className="min-w-0 flex-1 rounded-md border border-zinc-800 bg-zinc-900/60 px-2.5 py-1.5 text-sm text-zinc-200 placeholder:text-zinc-600 focus:border-zinc-600 focus:outline-none"
+              />
+            )}
+            <div className="ml-auto flex rounded-md border border-zinc-800 bg-zinc-900/60 p-0.5 text-xs" role="group" aria-label="Sort">
+              {(['tonnes', 'name'] as const).map((key) => (
+                <button
+                  key={key}
+                  onClick={() => setSortKey(key)}
+                  aria-pressed={sortKey === key}
+                  className={cn(
+                    'rounded px-2 py-1 transition-colors',
+                    sortKey === key ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
+                  )}
+                >
+                  {key === 'tonnes' ? 'By tonnes' : 'A–Z'}
+                </button>
+              ))}
+            </div>
+          </div>
+          <ol className="max-h-[560px] space-y-1 overflow-y-auto pr-1" aria-label={`Central-bank gold, ${period.range}`}>
+            {listed.length === 0 && <li className="px-2 py-1.5 text-sm text-zinc-500">No country matches.</li>}
+            {listed.map((e) => {
               const active = e.id === focusId;
               const width = `${(Math.abs(e.tonnes) / maxAbs) * 100}%`;
               return (
                 <li key={e.id}>
                   <button
+                    title={holdings && e.asOf ? `${e.name}, ${monthLabel(e.asOf)}` : e.name}
                     onClick={() => select(e.id)}
                     onMouseEnter={() => setHoveredId(e.id)}
                     onMouseLeave={() => setHoveredId(null)}
@@ -134,23 +197,23 @@ export function GoldGlobeSection() {
                     onBlur={() => setHoveredId(null)}
                     aria-pressed={e.id === selectedId}
                     className={cn(
-                      'grid w-full grid-cols-[1.25rem_6.5rem_1fr_3.5rem] items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors',
+                      'grid w-full grid-cols-[1.5rem_7rem_1fr_4rem] items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors',
                       active ? 'bg-zinc-800/80' : 'hover:bg-zinc-900'
                     )}
                   >
-                    <span className="text-xs tabular-nums text-zinc-600">{i + 1}</span>
+                    <span className="text-xs tabular-nums text-zinc-600">{rankOf.get(e.id)}</span>
                     <span className="truncate text-zinc-200">{e.name}</span>
                     <span className="h-2 overflow-hidden rounded-full bg-zinc-900">
                       <span
                         className="block h-full rounded-full"
-                        style={{ width, background: e.tonnes >= 0 ? GLOBE_COLORS.buy : GLOBE_COLORS.sell }}
+                        style={{ width, background: colorOf(e.tonnes) }}
                       />
                     </span>
                     <span
                       className="text-right font-medium tabular-nums"
-                      style={{ color: e.tonnes >= 0 ? GLOBE_COLORS.buy : GLOBE_COLORS.sell }}
+                      style={{ color: colorOf(e.tonnes) }}
                     >
-                      {formatTonnes(e.tonnes)}
+                      {formatTonnes(e.tonnes, !holdings)}
                     </span>
                   </button>
                 </li>
@@ -165,12 +228,22 @@ export function GoldGlobeSection() {
                 {period.source.label}
                 <ExternalLink className="h-3 w-3" />
               </a>
-              . Rounded, and revised by the WGC over time.
+              {holdings
+                ? '. Each country is shown as of the month it last reported (pick a country to see it), so the totals are not all from the same month.'
+                : '. Rounded, and revised by the WGC over time.'}
             </p>
-            <p>
-              Only countries named in that summary are shown. A grey country is not in this dataset, which is not the
-              same as zero. Reviewed {eventDateLabel(GLOBE_REVIEWED)}.
-            </p>
+            {holdings ? (
+              <p>
+                Interim figures pending the World Gold Council&apos;s official holdings table. Some holders, such as
+                Venezuela, the IMF and the BIS, are missing from this table; a grey country is not in this dataset,
+                which is not the same as zero. Reviewed {eventDateLabel(HOLDINGS_REVIEWED)}.
+              </p>
+            ) : (
+              <p>
+                Only countries named in that summary are shown. A grey country is not in this dataset, which is not
+                the same as zero. Reviewed {eventDateLabel(GLOBE_REVIEWED)}.
+              </p>
+            )}
           </div>
         </div>
       </div>
