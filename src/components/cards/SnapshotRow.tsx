@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertTriangle } from 'lucide-react';
 import { MarketSnapshot, MetricSnapshot } from '@/lib/types';
@@ -35,11 +35,6 @@ function MetricDisplay({ label, metric, displayType, unit }: MetricDisplayProps)
   const [showTooltip, setShowTooltip] = useState(false);
   const [tooltipPos, setTooltipPos] = useState({ top: 0, left: 0 });
   const triggerRef = useRef<HTMLDivElement>(null);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
   
   const isMissing = metric.status === 'missing';
   const isStale = metric.status === 'stale';
@@ -73,7 +68,7 @@ function MetricDisplay({ label, metric, displayType, unit }: MetricDisplayProps)
     setShowTooltip(false);
   };
 
-  const tooltipContent = showTooltip && (isStale || isMissing) && mounted && (
+  const tooltipContent = showTooltip && (isStale || isMissing) && (
     createPortal(
       <div 
         className="fixed z-[1000] px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg shadow-lg whitespace-nowrap pointer-events-none"

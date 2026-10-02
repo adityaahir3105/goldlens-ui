@@ -29,7 +29,7 @@ function getSentimentBadge(sentiment: string) {
   }
 }
 
-function NewsCard({ item, index }: { item: GoldNewsItem; index: number }) {
+function NewsCard({ item }: { item: GoldNewsItem }) {
   const sentiment = getSentimentBadge(item.sentiment);
 
   return (
@@ -91,7 +91,7 @@ export async function GoldNewsSection() {
       {newsItems.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {newsItems.map((item, index) => (
-            <NewsCard key={index} item={item} index={index} />
+            <NewsCard key={index} item={item} />
           ))}
         </div>
       ) : (
