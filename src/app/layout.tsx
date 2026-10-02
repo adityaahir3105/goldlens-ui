@@ -70,6 +70,13 @@ export default function RootLayout({
                 GoldLens provides macro risk analytics for informational purposes only.
                 This is not financial advice.
               </p>
+              <p className="mt-2 text-center text-xs text-zinc-600">
+                News headlines come from publishers&apos; RSS feeds and the{' '}
+                <a href="https://www.gdeltproject.org" className="underline hover:text-zinc-400" target="_blank" rel="noreferrer">
+                  GDELT Project
+                </a>
+                .
+              </p>
             </div>
           </footer>
         </div>
