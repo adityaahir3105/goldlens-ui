@@ -3,13 +3,12 @@
 import { useMemo, useState } from 'react';
 import { ExternalLink, Pause, Play } from 'lucide-react';
 import { GLOBE_PERIODS, GLOBE_REVIEWED } from '@/data/globe/central-bank-gold';
-import { GOLD_HOLDINGS, HOLDINGS_REVIEWED } from '@/data/globe/gold-holdings';
-import { GLOBE_COLORS, GlobePeriod, formatTonnes, monthLabel } from '@/lib/globe';
+import { GLOBE_COLORS, entryFill, formatTonnes, monthLabel } from '@/lib/globe';
 import { eventDateLabel } from '@/lib/history';
 import { cn } from '@/lib/utils';
 import { GoldGlobe } from './GoldGlobe';
 
-const PERIODS: GlobePeriod[] = [GOLD_HOLDINGS, ...GLOBE_PERIODS];
+const PERIODS = GLOBE_PERIODS;
 
 type SortKey = 'tonnes' | 'name';
 
@@ -24,12 +23,16 @@ export function GoldGlobeSection() {
   const period = PERIODS.find((p) => p.id === periodId) ?? PERIODS[0];
   const holdings = period.kind === 'holdings';
   const ranked = useMemo(() => [...period.entries].sort((a, b) => b.tonnes - a.tonnes), [period]);
-  const rankOf = useMemo(() => new Map(ranked.map((e, i) => [e.id, i + 1])), [ranked]);
+  // Net-change tabs list only the countries that moved; unchanged ones still shade the globe.
+  const movers = useMemo(() => (holdings ? ranked : ranked.filter((e) => e.tonnes !== 0)), [ranked, holdings]);
+  const unchanged = ranked.length - movers.length;
+  const rankOf = useMemo(() => new Map(movers.map((e, i) => [e.id, i + 1])), [movers]);
+  const newest = useMemo(() => ranked.reduce((m, e) => (e.asOf && e.asOf > m ? e.asOf : m), ''), [ranked]);
   const listed = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const rows = q ? ranked.filter((e) => e.name.toLowerCase().includes(q)) : ranked;
+    const rows = q ? movers.filter((e) => e.name.toLowerCase().includes(q)) : movers;
     return sortKey === 'name' ? [...rows].sort((a, b) => a.name.localeCompare(b.name)) : rows;
-  }, [ranked, query, sortKey]);
+  }, [movers, query, sortKey]);
   const maxAbs = Math.max(1, ...ranked.map((e) => Math.abs(e.tonnes)));
   const bought = ranked.filter((e) => e.tonnes > 0).reduce((s, e) => s + e.tonnes, 0);
   const sold = ranked.filter((e) => e.tonnes < 0).reduce((s, e) => s - e.tonnes, 0);
@@ -96,6 +99,9 @@ export function GoldGlobeSection() {
                 <div className="text-2xl font-bold" style={{ color: colorOf(focused.tonnes) }}>
                   {formatTonnes(focused.tonnes, !holdings)}
                 </div>
+                {holdings && focused.sharePct !== undefined && (
+                  <p className="text-xs text-zinc-400">{focused.sharePct}% of its total reserves</p>
+                )}
                 {focused.note && <p className="mt-1 text-xs leading-relaxed text-zinc-400">{focused.note}</p>}
               </>
             ) : (
@@ -111,7 +117,11 @@ export function GoldGlobeSection() {
                     <span className="font-semibold" style={{ color: GLOBE_COLORS.sell }}>{formatTonnes(-sold)}</span> sold
                   </div>
                 )}
-                <div className="text-xs text-zinc-500">by the {ranked.length} listed</div>
+                <div className="text-xs text-zinc-500">
+                  {holdings
+                    ? `across ${ranked.length} reporting countries`
+                    : `by ${movers.length} countries; ${unchanged} more reported no change`}
+                </div>
               </>
             )}
           </div>
@@ -147,6 +157,10 @@ export function GoldGlobeSection() {
                 </span>
                 <span className="flex items-center gap-1.5">
                   <span className="h-2.5 w-2.5 rounded-sm" style={{ background: GLOBE_COLORS.sell }} /> Sold
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-sm border border-zinc-700" style={{ background: entryFill(0, 1) }} /> No
+                  change
                 </span>
               </>
             )}
@@ -189,7 +203,7 @@ export function GoldGlobeSection() {
               return (
                 <li key={e.id}>
                   <button
-                    title={holdings && e.asOf ? `${e.name}, ${monthLabel(e.asOf)}` : e.name}
+                    title={e.asOf ? `${e.name}, ${holdings ? '' : 'to '}${monthLabel(e.asOf)}` : e.name}
                     onClick={() => select(e.id)}
                     onMouseEnter={() => setHoveredId(e.id)}
                     onMouseLeave={() => setHoveredId(null)}
@@ -202,7 +216,15 @@ export function GoldGlobeSection() {
                     )}
                   >
                     <span className="text-xs tabular-nums text-zinc-600">{rankOf.get(e.id)}</span>
-                    <span className="truncate text-zinc-200">{e.name}</span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-zinc-200">{e.name}</span>
+                      {e.asOf && e.asOf !== newest && (
+                        <span className="block text-[10px] leading-tight text-zinc-500">
+                          {holdings ? '' : 'to '}
+                          {monthLabel(e.asOf)}
+                        </span>
+                      )}
+                    </span>
                     <span className="h-2 overflow-hidden rounded-full bg-zinc-900">
                       <span
                         className="block h-full rounded-full"
@@ -228,22 +250,26 @@ export function GoldGlobeSection() {
                 {period.source.label}
                 <ExternalLink className="h-3 w-3" />
               </a>
+              .{' '}
               {holdings
-                ? '. Each country is shown as of the month it last reported (pick a country to see it), so the totals are not all from the same month.'
-                : '. Rounded, and revised by the WGC over time.'}
+                ? 'Each country is shown as of the latest month it reported, marked under its name when older than the rest.'
+                : 'Holdings at the start and end of the period compared, so this is the net change. Moves under 0.05t count as no change.'}
             </p>
-            {holdings ? (
+            {period.notesSource && (
               <p>
-                Interim figures pending the World Gold Council&apos;s official holdings table. Some holders, such as
-                Venezuela, the IMF and the BIS, are missing from this table; a grey country is not in this dataset,
-                which is not the same as zero. Reviewed {eventDateLabel(HOLDINGS_REVIEWED)}.
-              </p>
-            ) : (
-              <p>
-                Only countries named in that summary are shown. A grey country is not in this dataset, which is not
-                the same as zero. Reviewed {eventDateLabel(GLOBE_REVIEWED)}.
+                Country notes:{' '}
+                <a href={period.notesSource.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-zinc-300 hover:text-gold">
+                  {period.notesSource.label}
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+                .
               </p>
             )}
+            <p>
+              Central-bank reserves only, so gold held elsewhere by the state (such as Azerbaijan&apos;s oil fund or
+              Turkey&apos;s Treasury) is not counted, and the IMF, ECB and BIS are not listed. A grey country did not
+              report, which is not the same as zero. Reviewed {eventDateLabel(GLOBE_REVIEWED)}.
+            </p>
           </div>
         </div>
       </div>

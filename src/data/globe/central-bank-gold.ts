@@ -1,68 +1,143 @@
-import { GlobePeriod } from '@/lib/globe';
+import { GlobeEntry, GlobePeriod } from '@/lib/globe';
+import reserves from './gold-reserves.json';
 
-// Net change in official gold reserves, in tonnes, as reported by the World Gold Council
-// (compiled from IMF IFS and central-bank releases). Only countries named in the WGC summaries
-// cited below are included; a country missing here is "not reported", not zero. WGC revises
-// these figures, so treat them as rounded and as of the date reviewed.
-export const GLOBE_REVIEWED = '2026-09-29';
+// Official gold reserves per country, in tonnes, from the World Gold Council's "gold reserves by
+// country" table (IMF IFS data). gold-reserves.json holds one snapshot per month listed in
+// `months` (built by scripts/globe/build_gold_reserves.py); null means the country had not
+// reported for that month. Holdings and net changes below are all derived from it, so a country
+// missing from a tab did not report, which is not the same as zero.
+export const GLOBE_REVIEWED = '2026-10-02';
+
+interface ReserveCountry {
+  id: string;
+  name: string;
+  lonLat?: number[];
+  tonnes: (number | null)[];
+  sharePct?: number;
+}
+
+const MONTHS: string[] = reserves.months;
+const COUNTRIES = reserves.countries as ReserveCountry[];
+const LATEST = MONTHS[MONTHS.length - 1];
+
+const SOURCE = {
+  label: 'World Gold Council, gold reserves by country (IMF IFS data)',
+  url: 'https://www.gold.org/goldhub/data/gold-reserves-by-country',
+};
+
+// Changes smaller than this are revaluation and rounding noise, shown as no change.
+const NOISE_TONNES = 0.05;
+
+/** Index of the last reported month at or before `upTo`, after `after`; -1 if none. */
+function lastReported(c: ReserveCountry, after = -1, upTo = MONTHS.length - 1): number {
+  for (let i = upTo; i > after; i--) if (c.tonnes[i] !== null) return i;
+  return -1;
+}
+
+const base = (c: ReserveCountry) => ({
+  id: c.id,
+  name: c.name,
+  ...(c.lonLat ? { lonLat: c.lonLat as [number, number] } : {}),
+});
+
+/** Latest reported holdings per country. */
+function holdings(notes: Record<string, string>): GlobeEntry[] {
+  return COUNTRIES.flatMap((c) => {
+    const i = lastReported(c);
+    if (i < 0) return [];
+    return [{ ...base(c), tonnes: c.tonnes[i]!, asOf: MONTHS[i], sharePct: c.sharePct, note: notes[c.id] }];
+  });
+}
+
+/**
+ * Net change from `from` to `to`. With `to` omitted, each country runs to the latest month it
+ * has reported after `from`.
+ */
+function change(from: string, to: string | undefined, notes: Record<string, string>): GlobeEntry[] {
+  const a = MONTHS.indexOf(from);
+  return COUNTRIES.flatMap((c) => {
+    const start = c.tonnes[a];
+    const b = to ? MONTHS.indexOf(to) : lastReported(c, a);
+    const end = b > a ? c.tonnes[b] : null;
+    if (start === null || end === null) return [];
+    const delta = Math.round((end - start) * 100) / 100;
+    const partial = MONTHS[b] !== LATEST && !to ? `Through ${monthName(MONTHS[b])}; later months not reported yet.` : '';
+    const note = [notes[c.id], partial].filter(Boolean).join(' ') || undefined;
+    return [{ ...base(c), tonnes: Math.abs(delta) < NOISE_TONNES ? 0 : delta, asOf: MONTHS[b], note }];
+  });
+}
+
+function monthName(yearMonth: string): string {
+  return new Date(`${yearMonth}-01T00:00:00Z`).toLocaleString('en-US', { month: 'long', timeZone: 'UTC' });
+}
+
+function year(y: number, notes: Record<string, string> = {}, notesSource?: GlobePeriod['notesSource']): GlobePeriod {
+  return {
+    id: String(y),
+    label: String(y),
+    range: `Full year ${y}`,
+    source: SOURCE,
+    notesSource,
+    entries: change(`${y - 1}-12`, `${y}-12`, notes),
+  };
+}
 
 export const GLOBE_PERIODS: GlobePeriod[] = [
   {
+    id: 'holdings',
+    kind: 'holdings',
+    label: 'Total holdings',
+    range: 'Latest reported holdings',
+    source: SOURCE,
+    entries: holdings({
+      '031': 'Central bank only. The State Oil Fund (SOFAZ) also holds gold, which is not counted here.',
+    }),
+  },
+  {
     id: '2026',
     label: '2026 so far',
-    range: 'January to July 2026',
-    source: {
-      label: 'World Gold Council, central bank statistics (Sep 2026)',
+    range: `January to ${monthName(LATEST)} ${LATEST.slice(0, 4)}`,
+    source: SOURCE,
+    notesSource: {
+      label: 'WGC central bank statistics (Sep 2026)',
       url: 'https://www.gold.org/goldhub/gold-focus/2026/09/central-bank-gold-statistics-central-banks-make-positive-headlines-gold',
     },
-    entries: [
-      { id: '616', name: 'Poland', tonnes: 90, note: 'Holdings reached 640t, against a 700t target.' },
-      { id: '156', name: 'China', tonnes: 60, note: 'July was its 21st straight month of buying.' },
-      { id: '860', name: 'Uzbekistan', tonnes: 40 },
-      { id: '398', name: 'Kazakhstan', tonnes: 29 },
-      { id: '643', name: 'Russia', tonnes: -50, note: 'Sold to help cover a budget deficit. Holdings: 2,277t.' },
-      { id: '792', name: 'Turkey', tonnes: -85, note: 'Most of the selling came in the first quarter.' },
-    ],
+    entries: change('2025-12', undefined, {
+      '616': 'Holdings: 632t at the end of June, against a 700t target.',
+      '156': 'Bought in every month of the year so far.',
+      '643': 'Sold to help cover a budget deficit.',
+      '792': 'Most of the selling came in the first quarter.',
+    }),
   },
-  {
-    id: '2025',
-    label: '2025',
-    range: 'Full year 2025',
-    source: {
-      label: 'World Gold Council, Gold Demand Trends full year 2025',
+  year(
+    2025,
+    {
+      '616': 'Largest buyer for the second year running. Holdings: 550t.',
+      '398': 'Its biggest annual purchase in records back to 1993.',
+      '076': 'First purchases since 2021, all between September and November.',
+      '203': 'Holdings: 72t, aiming for 100t by 2028.',
+      '356': 'Down from 73t in 2024, its smallest purchase in eight years.',
+      SGP: 'Largest seller of the year.',
+    },
+    {
+      label: 'WGC Gold Demand Trends full year 2025',
       url: 'https://www.gold.org/goldhub/research/gold-demand-trends/gold-demand-trends-full-year-2025/central-banks',
+    }
+  ),
+  year(
+    2024,
+    {
+      '616': 'Largest buyer of the year.',
+      '792': "Central bank only. The WGC's demand report, which also counts Treasury gold, puts it at 75t.",
+      '356': 'Holdings reached 876t.',
+      '608': 'Largest seller of the year, citing high prices.',
     },
-    entries: [
-      { id: '616', name: 'Poland', tonnes: 102, note: 'Largest buyer for the second year running. Holdings: 550t.' },
-      { id: '398', name: 'Kazakhstan', tonnes: 57, note: 'Its biggest annual purchase in records back to 1993.' },
-      { id: '076', name: 'Brazil', tonnes: 43, note: 'First purchases since 2021, all between September and November.' },
-      { id: '031', name: 'Azerbaijan', tonnes: 38, note: 'Bought by the State Oil Fund (SOFAZ), not the central bank.' },
-      { id: '156', name: 'China', tonnes: 27 },
-      { id: '792', name: 'Turkey', tonnes: 27 },
-      { id: '203', name: 'Czechia', tonnes: 20, note: 'Holdings: 72t, aiming for 100t by 2028.' },
-      { id: '356', name: 'India', tonnes: 4, note: 'Down from 73t in 2024, its smallest purchase in eight years.' },
-      { id: '643', name: 'Russia', tonnes: -6 },
-      { id: '288', name: 'Ghana', tonnes: -12 },
-      { id: 'SGP', name: 'Singapore', tonnes: -26, lonLat: [103.82, 1.35], note: 'Largest seller of the year.' },
-    ],
-  },
-  {
-    id: '2024',
-    label: '2024',
-    range: 'Full year 2024',
-    source: {
-      label: 'World Gold Council, Gold Demand Trends full year 2024',
+    {
+      label: 'WGC Gold Demand Trends full year 2024',
       url: 'https://www.gold.org/goldhub/research/gold-demand-trends/gold-demand-trends-full-year-2024/central-banks',
-    },
-    entries: [
-      { id: '616', name: 'Poland', tonnes: 90, note: 'Largest buyer of the year.' },
-      { id: '792', name: 'Turkey', tonnes: 75, note: 'Includes gold held by the Treasury.' },
-      { id: '356', name: 'India', tonnes: 73, note: 'Holdings reached 876t.' },
-      { id: '156', name: 'China', tonnes: 44 },
-      { id: '368', name: 'Iraq', tonnes: 20 },
-      { id: 'SGP', name: 'Singapore', tonnes: -10, lonLat: [103.82, 1.35] },
-      { id: '398', name: 'Kazakhstan', tonnes: -10 },
-      { id: '608', name: 'Philippines', tonnes: -29, note: 'Largest seller of the year, citing high prices.' },
-    ],
-  },
+    }
+  ),
+  year(2023),
+  year(2022),
+  year(2021),
 ];

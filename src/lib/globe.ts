@@ -9,8 +9,10 @@ export interface GlobeEntry {
   // when the period's kind is 'holdings'.
   tonnes: number;
   note?: string;
-  // Month the figure refers to (YYYY-MM), for holdings where countries report at different times.
+  // Last month the figure covers (YYYY-MM); countries report at different times.
   asOf?: string;
+  // Gold's share of the country's total reserves, percent (holdings only).
+  sharePct?: number;
   // [longitude, latitude] for the spike; defaults to the country's centroid.
   lonLat?: [number, number];
 }
@@ -22,6 +24,8 @@ export interface GlobePeriod {
   label: string;
   range: string;
   source: { label: string; url: string };
+  // Where the hand-written country notes come from, when that differs from the data source.
+  notesSource?: { label: string; url: string };
   entries: GlobeEntry[];
 }
 
