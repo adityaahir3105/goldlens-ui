@@ -120,7 +120,6 @@ export function GoldPriceCard({ data, history = [] }: GoldPriceCardProps) {
   }));
 
   const hasHistory = chartData.length >= 2;
-  const latestHistoryDate = hasHistory ? chartData[chartData.length - 1].date : null;
 
   const thirtyDayChangePercent = hasHistory
     ? safePercentChange(chartData[chartData.length - 1].value, chartData[0].value)

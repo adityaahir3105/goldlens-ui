@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useSyncExternalStore } from 'react';
 
 interface UseLiveGoldPriceOptions {
   price: number;
@@ -18,14 +18,24 @@ function easeOutQuad(t: number): number {
   return t * (2 - t);
 }
 
+function subscribeToClock(onTick: () => void): () => void {
+  const interval = setInterval(onTick, 1000);
+  return () => clearInterval(interval);
+}
+
+// Server render (and hydration) shows 0s, matching the previous useState(0) behavior.
+function getServerSecondsAgo(): number {
+  return 0;
+}
+
 export function useLiveGoldPrice({
   price,
   updatedAt,
   interpolationDurationMs = 120000,
 }: UseLiveGoldPriceOptions): UseLiveGoldPriceResult {
   const [displayPrice, setDisplayPrice] = useState(price);
-  const [secondsAgo, setSecondsAgo] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [lastPrice, setLastPrice] = useState(price);
   
   const previousPriceRef = useRef(price);
   const targetPriceRef = useRef(price);
@@ -38,12 +48,17 @@ export function useLiveGoldPrice({
     return Math.floor((now - updated) / 1000);
   }, [updatedAt]);
 
+  // Flag the animation as soon as a new price arrives, during render rather than in an effect.
+  if (price !== lastPrice) {
+    setLastPrice(price);
+    setIsAnimating(true);
+  }
+
   useEffect(() => {
     if (price !== targetPriceRef.current) {
       previousPriceRef.current = displayPrice;
       targetPriceRef.current = price;
       animationStartTimeRef.current = Date.now();
-      setIsAnimating(true);
     }
   }, [price, displayPrice]);
 
@@ -82,15 +97,7 @@ export function useLiveGoldPrice({
     };
   }, [price, interpolationDurationMs]);
 
-  useEffect(() => {
-    setSecondsAgo(calculateSecondsAgo());
-    
-    const interval = setInterval(() => {
-      setSecondsAgo(calculateSecondsAgo());
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [calculateSecondsAgo]);
+  const secondsAgo = useSyncExternalStore(subscribeToClock, calculateSecondsAgo, getServerSecondsAgo);
 
   return {
     displayPrice,

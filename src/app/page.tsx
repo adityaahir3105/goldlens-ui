@@ -53,8 +53,6 @@ async function fetchDashboardData() {
 
   const realYieldSignal: SignalColor | null = realYieldData?.latestSignal?.signal || null;
   const dxySignal: SignalColor | null = dxyData?.latestSignal?.signal || null;
-  const realYieldHistory = realYieldData?.history || [];
-  const dxyHistory = dxyData?.history || [];
 
   return { 
     goldPrice, 
