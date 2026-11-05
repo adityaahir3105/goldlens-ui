@@ -9,6 +9,7 @@ const LINKS = [
   { href: '/history', label: 'History' },
   { href: '/duel', label: 'Gold Duel' },
   { href: '/rewind', label: 'Rewind Lab' },
+  { href: '/land', label: 'Land Deals' },
 ];
 
 export function HeaderNav() {

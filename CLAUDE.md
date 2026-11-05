@@ -5,10 +5,10 @@ Charts: Recharts. Globe: d3-geo + topojson-client + world-atlas. Animation: fram
 Backend is a separate repo (goldlens-core), reached via `NEXT_PUBLIC_API_BASE`; wrappers live in `src/lib/api.ts`.
 
 ## Map
-- `src/app/` – routes: `/` dashboard, `/rewind`, `/history`, `/duel`
+- `src/app/` – routes: `/` dashboard, `/rewind`, `/history`, `/duel`, `/land` (Gujarat land notices; Leaflet map)
 - `src/components/<feature>/` – cards, charts, globe, history, rewind, duel, ui
 - `src/lib/<feature>.ts` – logic per feature; shared types in `src/lib/types.ts`
-- `src/data/` – static data (see below); `scripts/` – Python generators for that data
+- `src/data/` – static data (see below); `scripts/` – Python generators for that data (`scripts/land/` also has a Node builder: `npm run land:build`)
 
 ## Commands (CI runs exactly these)
 - `npm run lint`

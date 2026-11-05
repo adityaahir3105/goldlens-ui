@@ -40,3 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 gold-history.csv
+
+# python
+__pycache__/

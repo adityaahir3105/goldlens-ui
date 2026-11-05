@@ -22,6 +22,7 @@ A production-quality macro risk analytics dashboard for gold market exposure ana
 - **Central-bank globe** (dashboard) - Interactive 3D globe of net central-bank gold buying and selling by country (World Gold Council figures)
 - **History** (`/history`) - Gold prices since 1833 with key events, log/linear and inflation-adjusted views, a story mode, and upcoming scheduled events
 - **Gold Duel** (`/duel`) - A 10-round game: you and a TimesFM-driven AI split credits between gold and cash over a hidden stretch of real prices
+- **Land Deals** (`/land`) - AnyRoR e-Chavdi mutation notices for a Gujarat village (Chirai Moti, Bhachau, Kachchh): sales, loan charges and family transfers per month, sequences per survey number, estimated objection windows, and a satellite map where you pin survey numbers (exports KML/GeoJSON)
 
 ## Project Structure
 
@@ -138,6 +139,25 @@ but its weights are licensed for non-commercial, non-production use only.
 - `src/data/globe/central-bank-gold.ts` holds net central-bank purchases by country as reported
   by the World Gold Council, with the source for each period. Countries not named in those
   summaries are left out rather than shown as zero.
+
+## Land deal data (`/land`)
+
+- Source: e-Chavdi notices on [AnyRoR](https://anyror.gujarat.gov.in/LandRecordRural.aspx)
+  (Revenue Department, Government of Gujarat). They are information-only copies, not certified records.
+- The AnyRoR form has a CAPTCHA. Nothing here solves or bypasses it; each month is fetched by a person.
+- `src/data/land/echavdi.json` is built from saved result pages in `scripts/land/raw/`:
+  1. `pip install playwright && python -m playwright install chromium` (once)
+  2. `python scripts/land/collect_echavdi.py` opens a browser. Choose e-CHAVDI, the village and a
+     month, solve the CAPTCHA, and the script saves each result page. Repeat for each month.
+  3. `npm run land:build` parses the pages (with the same parser the app uses, `src/lib/land.ts`)
+     and writes the JSON.
+  Alternatively, drop saved pages into the "Add months" panel on `/land`. They are kept in that
+  browser, and "Dataset JSON" downloads the merged data in the same shape as `echavdi.json`.
+- A month with no notices only counts as checked if its file name ends in `-YYYY-MM.html`.
+- e-Chavdi has no coordinates. Survey pins are placed by hand (or from GPS on site) after checking
+  the official village map. They are stored in the browser and export to KML (Google Earth) or GeoJSON.
+- The village centre comes from GeoNames and is approximate (see `src/data/land/villages.ts`).
+  To add a village, add it there, collect its pages and rebuild.
 
 ## Deployment
 
