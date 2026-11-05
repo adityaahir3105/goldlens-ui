@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./package-lock.json)",
+      "Read(./src/data/rewind/gold-backtest.json)",
+      "Read(./src/data/history/gold-history.json)",
+      "Read(./.next/**)",
+      "Read(./.env)",
+      "Read(./.env.*)"
+    ]
+  }
+}
