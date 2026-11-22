@@ -1,0 +1,19 @@
+{
+  "output": {
+    "filePath": "repo-context.md",
+    "style": "markdown"
+  },
+  "ignore": {
+    "useGitignore": true,
+    "useDefaultPatterns": true,
+    "customPatterns": [
+      "**/package-lock.json", "**/*.lock", "**/*.xlsx",
+      "**/target/**", "**/.next/**", "**/dist/**", "**/build/**",
+      "**/.env*", "src/data/**/*.json",
+      "**/*.png", "**/*.jpg", "**/*.ico", "repo-context.md"
+    ]
+  },
+  "security": {
+    "enableSecurityCheck": true
+  }
+}
