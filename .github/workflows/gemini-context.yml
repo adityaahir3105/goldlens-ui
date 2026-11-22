@@ -1,0 +1,61 @@
+# Regenerates a Repomix snapshot of this repo on every push to main and writes it
+# into a Google Doc that a Gemini Notebook uses as a source (Drive sources auto-sync).
+# Setup: share the Doc with the deploy service account (Editor), set repo variable
+# GEMINI_DOC_ID to the Doc's id, and enable the Drive API in the GCP project.
+name: Gemini context
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: gemini-context
+  cancel-in-progress: true
+
+jobs:
+  snapshot:
+    if: ${{ vars.GEMINI_DOC_ID != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Pack repo
+        run: npx --yes repomix@1.19.0 --config repomix.config.json
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: '${{ secrets.WIF_PROVIDER }}'
+          service_account: '${{ secrets.SA_EMAIL }}'
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/drive
+
+      - name: Replace Google Doc contents
+        env:
+          TOKEN: ${{ steps.auth.outputs.access_token }}
+          DOC_ID: ${{ vars.GEMINI_DOC_ID }}
+        run: |
+          {
+            echo "Snapshot of ${GITHUB_REPOSITORY} at ${GITHUB_SHA::7}, $(date -u +%Y-%m-%dT%H:%MZ)"
+            echo
+            cat repo-context.md
+          } > upload.txt
+          chars=$(wc -m < upload.txt)
+          echo "Snapshot is ${chars} characters (Google Docs limit is about 1,020,000)."
+          code=$(curl -sS -o resp.json -w '%{http_code}' -X PATCH \
+            "https://www.googleapis.com/upload/drive/v3/files/${DOC_ID}?uploadType=media&supportsAllDrives=true" \
+            -H "Authorization: Bearer ${TOKEN}" \
+            -H "Content-Type: text/plain; charset=UTF-8" \
+            --data-binary @upload.txt)
+          echo "Drive API returned HTTP ${code}"
+          if [ "$code" != "200" ]; then cat resp.json; exit 1; fi
